@@ -23,8 +23,11 @@ export default defineConfig({
       '@': path.resolve(__dirname, 'src'),
     }
   },
-  // Importante: ottimizza le dipendenze
   optimizeDeps: {
-    include: ['@walletconnect/web3wallet']
+    include: [
+      '@walletconnect/core',
+      '@walletconnect/web3wallet',
+      '@walletconnect/universal-provider'
+    ]
   }
 });
