@@ -1,6 +1,8 @@
 // ===== CONFIGURAZIONE =====
-// Usa l'importazione corretta per WalletConnect
-import * as WalletConnect from '@walletconnect/web3wallet';
+// Importa i moduli correttamente
+import { Core } from '@walletconnect/core';
+import { Web3Wallet } from '@walletconnect/web3wallet';
+import { UniversalProvider } from '@walletconnect/universal-provider';
 
 let walletPublicKey = null;
 let currentStep = 0;
@@ -22,17 +24,26 @@ let web3wallet = null;
 
 async function initWalletConnect() {
   if (!web3wallet) {
-    // Usa WalletConnect.WalletConnectWallet o WalletConnect.default
-    const WalletConnectWallet = WalletConnect.WalletConnectWallet || WalletConnect.default;
-    web3wallet = await WalletConnectWallet.init({
-      projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
-      metadata: {
-        name: 'LaunchCoin',
-        description: 'Solana Token Creator',
-        url: window.location.origin,
-        icons: ['https://launchcoin.io/logo.png']
-      }
-    });
+    try {
+      // Crea il core
+      const core = new Core({
+        projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
+      });
+
+      // Inizializza Web3Wallet
+      web3wallet = await Web3Wallet.init({
+        core,
+        metadata: {
+          name: 'LaunchCoin',
+          description: 'Solana Token Creator',
+          url: window.location.origin,
+          icons: ['https://launchcoin.io/logo.png']
+        }
+      });
+    } catch (e) {
+      console.error('WalletConnect init error:', e);
+      throw e;
+    }
   }
   return web3wallet;
 }
@@ -55,12 +66,17 @@ window.connectWallet = async function() {
   // 2. WalletConnect
   try {
     const wc = await initWalletConnect();
+    
+    // Connetti con WalletConnect
     const session = await wc.connect({
       requiredNamespaces: {
         solana: {
           methods: ['solana_signTransaction', 'solana_signMessage'],
           chains: ['solana:mainnet'],
-          events: ['chainChanged', 'accountsChanged']
+          events: ['chainChanged', 'accountsChanged'],
+          rpcMap: {
+            'solana:mainnet': 'https://api.mainnet-beta.solana.com'
+          }
         }
       }
     });
@@ -73,6 +89,7 @@ window.connectWallet = async function() {
     }
   } catch(e) {
     alert('❌ WalletConnect fallito: ' + e.message);
+    console.error(e);
     window.location.href = 'wallet.html';
   }
 };
