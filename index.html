@@ -13,7 +13,7 @@
       <img src="assets/logo.png" alt="LaunchCoin" class="logo-header" />
     </div>
     <div class="menu-wrapper">
-      <button class="hamburger" onclick="toggleMenu()">☰</button>
+      <button class="hamburger" onclick="window.toggleMenu()">☰</button>
       <nav class="dropdown-menu" id="dropdownMenu">
         <a href="create.html">Create Token</a>
         <a href="liquidity.html">Create Liquidity</a>
@@ -21,20 +21,34 @@
         <a href="faq.html">FAQ</a>
       </nav>
     </div>
-    <button class="connect-btn" onclick="connectWallet()">Connect</button>
+    <button class="connect-btn" onclick="window.connectWallet()">Connect</button>
   </header>
 
   <main>
     <section class="hero glass">
       <div class="warning-banner">⚠️ Beware of fake projects impersonating – LaunchCoin.io is the only legitimate project.</div>
+      
       <h1>LaunchCoin</h1>
       <p class="subtitle">Solana Token Creator</p>
       <p class="sub-subtitle">from concept to token in just a few clicks!</p>
-      <button class="cta" onclick="createCoin()">Create Token</button>
+      <button class="cta" onclick="window.createCoin()">Create Token</button>
+      
       <div class="stats">
-        <div class="stat-item"><img src="assets/bonk.png" alt="BONK" class="stat-icon" /><span class="token-name">$BONK</span><small>Market Cap<br />$1,402,083,298</small></div>
-        <div class="stat-item"><img src="assets/floki.png" alt="FLOKI" class="stat-icon" /><span class="token-name">$FLOKI</span><small>Market Cap<br />$918,084,213</small></div>
-        <div class="stat-item"><img src="assets/shib.png" alt="SHIB" class="stat-icon" /><span class="token-name">$SHIB</span><small>Market Cap<br />$9,577,353,223</small></div>
+        <div class="stat-item">
+          <img src="assets/bonk.png" alt="BONK" class="stat-icon" />
+          <span class="token-name">$BONK</span>
+          <small>Market Cap<br />$1,402,083,298</small>
+        </div>
+        <div class="stat-item">
+          <img src="assets/floki.png" alt="FLOKI" class="stat-icon" />
+          <span class="token-name">$FLOKI</span>
+          <small>Market Cap<br />$918,084,213</small>
+        </div>
+        <div class="stat-item">
+          <img src="assets/shib.png" alt="SHIB" class="stat-icon" />
+          <span class="token-name">$SHIB</span>
+          <small>Market Cap<br />$9,577,353,223</small>
+        </div>
       </div>
       <div id="result" style="margin-top:20px;"></div>
     </section>
@@ -61,9 +75,11 @@
     </section>
   </main>
 
-  <footer><p>&copy; 2026 LaunchCoin. All rights reserved.</p></footer>
+  <footer>
+    <p>&copy; 2026 LaunchCoin. All rights reserved.</p>
+  </footer>
 
-  <script src="https://unpkg.com/@solana/web3.js@1.87.6/lib/index.iife.min.js"></script>
-  <script src="app.js"></script>
+  <!-- VITE: usa src/main.js come entry point -->
+  <script type="module" src="/src/main.js"></script>
 </body>
 </html>
