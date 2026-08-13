@@ -1,6 +1,6 @@
 // ===== CONFIGURAZIONE =====
-import { WalletConnectWallet } from '@walletconnect/web3wallet';
-import { createWeb3Modal, defaultConfig } from '@walletconnect/modal';
+// Usa l'importazione corretta per WalletConnect
+import * as WalletConnect from '@walletconnect/web3wallet';
 
 let walletPublicKey = null;
 let currentStep = 0;
@@ -17,11 +17,13 @@ document.addEventListener('click', function(e) {
   if (wrapper && menu && !wrapper.contains(e.target)) menu.classList.remove('open');
 });
 
-// ===== WALLETCONNECT CON MODAL (COME UNISWAP) =====
+// ===== WALLETCONNECT =====
 let web3wallet = null;
 
 async function initWalletConnect() {
-  try {
+  if (!web3wallet) {
+    // Usa WalletConnect.WalletConnectWallet o WalletConnect.default
+    const WalletConnectWallet = WalletConnect.WalletConnectWallet || WalletConnect.default;
     web3wallet = await WalletConnectWallet.init({
       projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
       metadata: {
@@ -31,11 +33,8 @@ async function initWalletConnect() {
         icons: ['https://launchcoin.io/logo.png']
       }
     });
-    return web3wallet;
-  } catch (e) {
-    console.error('WalletConnect init error:', e);
-    throw e;
   }
+  return web3wallet;
 }
 
 // ===== CONNECT WALLET =====
@@ -56,7 +55,6 @@ window.connectWallet = async function() {
   // 2. WalletConnect
   try {
     const wc = await initWalletConnect();
-    
     const session = await wc.connect({
       requiredNamespaces: {
         solana: {
