@@ -1,7 +1,4 @@
 // ===== CONFIGURAZIONE =====
-// Importa i moduli correttamente
-import { Core } from '@walletconnect/core';
-import { Web3Wallet } from '@walletconnect/web3wallet';
 import { UniversalProvider } from '@walletconnect/universal-provider';
 
 let walletPublicKey = null;
@@ -19,20 +16,14 @@ document.addEventListener('click', function(e) {
   if (wrapper && menu && !wrapper.contains(e.target)) menu.classList.remove('open');
 });
 
-// ===== WALLETCONNECT =====
-let web3wallet = null;
+// ===== WALLETCONNECT CON UNIVERSAL PROVIDER =====
+let provider = null;
 
 async function initWalletConnect() {
-  if (!web3wallet) {
+  if (!provider) {
     try {
-      // Crea il core
-      const core = new Core({
+      provider = await UniversalProvider.init({
         projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
-      });
-
-      // Inizializza Web3Wallet
-      web3wallet = await Web3Wallet.init({
-        core,
         metadata: {
           name: 'LaunchCoin',
           description: 'Solana Token Creator',
@@ -45,7 +36,7 @@ async function initWalletConnect() {
       throw e;
     }
   }
-  return web3wallet;
+  return provider;
 }
 
 // ===== CONNECT WALLET =====
@@ -63,25 +54,20 @@ window.connectWallet = async function() {
     }
   }
 
-  // 2. WalletConnect
+  // 2. WalletConnect via UniversalProvider
   try {
-    const wc = await initWalletConnect();
+    const prov = await initWalletConnect();
     
-    // Connetti con WalletConnect
-    const session = await wc.connect({
-      requiredNamespaces: {
-        solana: {
-          methods: ['solana_signTransaction', 'solana_signMessage'],
-          chains: ['solana:mainnet'],
-          events: ['chainChanged', 'accountsChanged'],
-          rpcMap: {
-            'solana:mainnet': 'https://api.mainnet-beta.solana.com'
-          }
-        }
-      }
+    // Connetti
+    await prov.connect({
+      chains: ['solana:mainnet'],
+      optionalChains: ['solana:devnet'],
+      methods: ['solana_signTransaction', 'solana_signMessage'],
+      events: ['chainChanged', 'accountsChanged']
     });
 
-    const accounts = session.namespaces.solana.accounts;
+    // Ottieni l'account
+    const accounts = prov.accounts;
     if (accounts && accounts.length > 0) {
       walletPublicKey = accounts[0].split(':')[2];
       alert('✅ Connesso via WalletConnect: ' + walletPublicKey);
