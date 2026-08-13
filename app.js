@@ -30,25 +30,34 @@ async function connectWallet() {
   await connectWalletConnect();
 }
 
-// ===== WALLETCONNECT VIA CDN =====
+// ===== WALLETCONNECT VIA CDN UFFICIALE =====
 async function connectWalletConnect() {
   try {
-    // Carica WalletConnect dal CDN
+    // Carica WalletConnect dal CDN ufficiale
     const script = document.createElement('script');
-    script.src = 'https://unpkg.com/@walletconnect/web3wallet@1.16.1/dist/index.umd.js';
+    script.src = 'https://cdn.jsdelivr.net/npm/@walletconnect/web3wallet@1.16.1/dist/index.umd.min.js';
     document.head.appendChild(script);
     
     // Aspetta che il modulo sia caricato
     await new Promise((resolve) => {
       script.onload = resolve;
-      setTimeout(resolve, 3000);
+      script.onerror = () => {
+        // Fallback a cdnjs
+        const script2 = document.createElement('script');
+        script2.src = 'https://cdnjs.cloudflare.com/ajax/libs/walletconnect-web3wallet/1.16.1/index.min.js';
+        document.head.appendChild(script2);
+        script2.onload = resolve;
+        setTimeout(resolve, 5000);
+      };
+      setTimeout(resolve, 5000);
     });
 
-    if (typeof window.WalletConnectWallet === 'undefined') {
+    const WalletConnectWallet = window.WalletConnectWallet || window.web3wallet;
+    if (!WalletConnectWallet) {
       throw new Error('WalletConnect non caricato');
     }
 
-    const web3wallet = await window.WalletConnectWallet.init({
+    const web3wallet = await WalletConnectWallet.init({
       projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
       metadata: {
         name: 'LaunchCoin',
