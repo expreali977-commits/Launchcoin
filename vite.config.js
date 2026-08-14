@@ -25,10 +25,9 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: [
-      '@walletconnect/universal-provider',
       '@walletconnect/modal',
-      '@walletconnect/utils',
-      '@walletconnect/types'
+      '@walletconnect/universal-provider',
+      '@walletconnect/utils'
     ]
   }
 });
