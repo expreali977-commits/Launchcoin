@@ -25,7 +25,13 @@ export default defineConfig({
     include: [
       '@web3modal/ethers',
       '@web3modal/core',
-      '@walletconnect/universal-provider'
+      '@walletconnect/universal-provider',
+      'react',
+      'react-dom'
     ]
+  },
+  // Forza l'uso di React 18 per evitare conflitti
+  define: {
+    'process.env.NODE_ENV': '"production"',
   }
 });
