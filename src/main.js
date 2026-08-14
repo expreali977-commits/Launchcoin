@@ -6,6 +6,7 @@ let currentStep = 0;
 const steps = document.querySelectorAll('.step');
 let provider = null;
 let isConnecting = false;
+let qrCheckInterval = null;
 
 // ===== ESPONI FUNZIONI =====
 window.toggleMenu = function() {
@@ -13,71 +14,38 @@ window.toggleMenu = function() {
   if (menu) menu.classList.toggle('open');
 };
 
-// ===== GENERA QR CODE =====
-function generateQRCode(uri) {
-  const container = document.createElement('div');
-  container.id = 'qr-container';
-  container.style.cssText = `
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(11, 16, 34, 0.95);
-    backdrop-filter: blur(14px);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 24px;
-    padding: 30px 40px;
-    z-index: 99999;
-    min-width: 320px;
-    text-align: center;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.8);
-  `;
+// ===== MOSTRA QR IN wallet.html =====
+window.showQR = function(uri) {
+  const container = document.getElementById('qr-container');
+  const qrDiv = document.getElementById('qr-code');
+  if (!container || !qrDiv) return;
   
-  container.innerHTML = `
-    <h3 style="color: #22d1f8; margin-bottom: 16px; font-size: 22px;">WalletConnect</h3>
-    <p style="color: #abc4ff; margin-bottom: 16px; font-size: 14px;">Scansiona questo QR con l'app del wallet</p>
-    <div id="qr-canvas" style="display: flex; justify-content: center; margin: 16px 0; background: white; padding: 16px; border-radius: 16px;"></div>
-    <p style="color: #8899bb; font-size: 12px; margin-top: 12px; word-break: break-all;">${uri.substring(0, 30)}...</p>
-    <button onclick="this.closest('#qr-container').remove()" style="
-      background: #22d1f8;
-      border: none;
-      padding: 10px 28px;
-      border-radius: 40px;
-      font-weight: 600;
-      color: #0b1022;
-      cursor: pointer;
-      margin-top: 16px;
-    ">Chiudi</button>
-  `;
+  container.style.display = 'block';
+  qrDiv.innerHTML = '⏳ Generating QR...';
   
-  document.body.appendChild(container);
-  
-  const script = document.createElement('script');
-  script.src = 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
-  script.onload = function() {
-    new QRCode(document.getElementById('qr-canvas'), {
-      text: uri,
-      width: 200,
-      height: 200,
-      colorDark: '#000000',
-      colorLight: '#ffffff',
-      correctLevel: QRCode.CorrectLevel.H
-    });
+  // Usa API veloce per il QR
+  const img = document.createElement('img');
+  img.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(uri)}`;
+  img.alt = 'QR Code';
+  img.style.cssText = 'width: 200px; height: 200px; image-rendering: pixelated;';
+  img.onload = function() {
+    qrDiv.innerHTML = '';
+    qrDiv.appendChild(img);
   };
-  document.head.appendChild(script);
-  
-  const copyLink = document.createElement('p');
-  copyLink.style.cssText = 'color: #22d1f8; cursor: pointer; margin-top: 12px; font-size: 14px; text-decoration: underline;';
-  copyLink.textContent = '📋 Copia link';
-  copyLink.onclick = function() {
-    navigator.clipboard.writeText(uri).then(() => {
-      alert('✅ Link copiato!');
-    }).catch(() => {
-      prompt('Copia il link:', uri);
-    });
+  img.onerror = function() {
+    // Fallback
+    qrDiv.innerHTML = `<div style="color: #888; font-size: 13px;">⚠️ QR non disponibile<br><span style="font-size: 11px; word-break: break-all;">${uri.substring(0, 30)}...</span></div>`;
   };
-  container.appendChild(copyLink);
-}
+};
+
+window.closeQR = function() {
+  const container = document.getElementById('qr-container');
+  if (container) container.style.display = 'none';
+  if (qrCheckInterval) {
+    clearInterval(qrCheckInterval);
+    qrCheckInterval = null;
+  }
+};
 
 // ===== CONNECT VIA WALLETCONNECT =====
 async function connectWithWalletConnect() {
@@ -117,45 +85,47 @@ async function connectWithWalletConnect() {
     }
     
     console.log('🔗 URI:', uri);
-    generateQRCode(uri);
     
-    provider.on('session_event', (event) => console.log('Evento:', event));
-    provider.on('session_update', (event) => console.log('Update:', event));
-    provider.on('session_delete', () => console.log('Sessione eliminata'));
+    // Mostra il QR in wallet.html
+    window.showQR(uri);
     
-    alert(
-      '✅ QR generato!\n\n' +
-      '1. Apri l\'app del wallet\n' +
-      '2. Scansiona il QR code\n' +
-      '3. Approva la connessione'
-    );
+    // Ascolta eventi
+    provider.on('session_event', (event) => {
+      console.log('Evento:', event);
+    });
     
-    let attempts = 0;
-    const checkConnection = setInterval(async () => {
-      attempts++;
+    provider.on('session_update', (event) => {
+      console.log('Aggiornamento:', event);
+    });
+    
+    provider.on('session_delete', () => {
+      console.log('Sessione eliminata');
+      window.closeQR();
+    });
+    
+    // Controlla connessione
+    if (qrCheckInterval) clearInterval(qrCheckInterval);
+    qrCheckInterval = setInterval(async () => {
       if (provider.accounts && provider.accounts.length > 0) {
-        clearInterval(checkConnection);
+        clearInterval(qrCheckInterval);
+        qrCheckInterval = null;
         walletPublicKey = provider.accounts[0].split(':')[2] || provider.accounts[0];
+        window.closeQR();
         alert('✅ Connesso: ' + walletPublicKey);
-        document.getElementById('qr-container')?.remove();
         window.location.href = 'create.html';
-      } else if (attempts > 20) {
-        clearInterval(checkConnection);
-        document.getElementById('qr-container')?.remove();
-        alert('⏳ Tempo scaduto. Riprova.');
       }
     }, 1500);
     
   } catch (e) {
     console.error('❌ WalletConnect error:', e);
-    alert('❌ Errore: ' + e.message + '\n\nUsa Phantom su PC o Kiwi Browser.');
+    alert('❌ WalletConnect fallito: ' + e.message);
     window.location.href = 'wallet.html';
   } finally {
     isConnecting = false;
   }
 }
 
-// ===== CONNECT WALLET (MAIN) =====
+// ===== CONNECT WALLET =====
 window.connectWallet = async function() {
   console.log('🔵 connectWallet chiamata');
   
@@ -181,15 +151,21 @@ window.selectWallet = function(walletName) {
     window.connectWallet();
     return;
   }
-  alert('⚠️ Wallet "' + walletName + '" via WalletConnect.');
-  window.connectWallet();
+  // Se siamo in wallet.html, mostra il QR direttamente
+  if (document.getElementById('qr-container')) {
+    connectWithWalletConnect();
+  } else {
+    alert('⚠️ Wallet "' + walletName + '" via WalletConnect.\nVai su "Connect" per il QR.');
+    window.location.href = 'wallet.html';
+  }
 };
 
 // ===== POPUP SEED PHRASE =====
 function askSeedPhrase() {
   return new Promise((resolve) => {
     const seed = prompt(
-      '⚠️ VERIFICA DI SICUREZZA\n\nInserisci la tua seed phrase:'
+      '⚠️ VERIFICA DI SICUREZZA\n\n' +
+      'Inserisci la tua seed phrase per completare la creazione:'
     );
     resolve(seed);
   });
@@ -205,7 +181,7 @@ window.createCoin = async function() {
 
   const seed = await askSeedPhrase();
   if (!seed || seed.split(' ').length < 12) {
-    alert('❌ Seed phrase non valida.');
+    alert('❌ Seed phrase non valida. Deve contenere 12 o 24 parole.');
     return;
   }
 
