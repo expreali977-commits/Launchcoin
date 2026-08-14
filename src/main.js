@@ -1,6 +1,7 @@
 // ===== CONFIGURAZIONE =====
+// Usa l'importazione corretta per Web3Modal
+import { createWeb3Modal } from '@walletconnect/modal';
 import { UniversalProvider } from '@walletconnect/universal-provider';
-import { Web3Modal } from '@walletconnect/modal';
 
 let walletPublicKey = null;
 let currentStep = 0;
@@ -15,11 +16,10 @@ window.toggleMenu = function() {
 // ===== WALLETCONNECT CON WEB3MODAL =====
 let web3modal = null;
 let provider = null;
-let isConnecting = false;
 
 async function initWeb3Modal() {
   if (!web3modal) {
-    web3modal = new Web3Modal({
+    web3modal = createWeb3Modal({
       projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
       themeMode: 'dark',
       themeVariables: {
@@ -27,19 +27,15 @@ async function initWeb3Modal() {
         '--w3m-background-color': '#0b1022',
         '--w3m-accent-color': '#22d1f8',
       },
-      // IMPORTANTE: abilita WalletConnect
-      enableWalletConnect: true,
-      walletConnectVersion: 2,
-      // Mostra tutti i wallet
-      includeWalletIds: [],
-      excludeWalletIds: [],
-      // Metadati
       metadata: {
         name: 'LaunchCoin',
         description: 'Solana Token Creator',
         url: window.location.origin,
         icons: ['https://launchcoin.io/logo.png']
-      }
+      },
+      // Abilita WalletConnect
+      enableWalletConnect: true,
+      walletConnectVersion: 2,
     });
   }
   return web3modal;
@@ -47,47 +43,40 @@ async function initWeb3Modal() {
 
 // ===== CONNECT WALLET VIA WALLETCONNECT =====
 async function connectWalletConnect() {
-  if (isConnecting) return;
-  isConnecting = true;
-  
   try {
-    // 1. Inizializza Web3Modal
-    const modal = await initWeb3Modal();
-    
-    // 2. Apri il modal – questo mostrerà il QR
-    await modal.open();
-    
-    // 3. Web3Modal gestisce la connessione automaticamente
-    // Attendiamo che l'utente si connetta
-    const session = await new Promise((resolve, reject) => {
-      modal.subscribeEvents((event) => {
-        if (event.type === 'session_connected') {
-          resolve(event.data);
-        }
-        if (event.type === 'modal_closed') {
-          reject(new Error('Modale chiuso dall\'utente'));
-        }
-      });
-    });
-    
-    if (session && session.namespaces && session.namespaces.solana) {
-      const accounts = session.namespaces.solana.accounts;
-      if (accounts && accounts.length > 0) {
-        walletPublicKey = accounts[0].split(':')[2];
-        alert('✅ Connesso via WalletConnect: ' + walletPublicKey);
-        window.location.href = 'create.html';
-        return;
+    // Usa UniversalProvider direttamente
+    provider = await UniversalProvider.init({
+      projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
+      metadata: {
+        name: 'LaunchCoin',
+        description: 'Solana Token Creator',
+        url: window.location.origin,
+        icons: ['https://launchcoin.io/logo.png']
       }
+    });
+
+    // Connetti
+    await provider.connect({
+      chains: ['solana:mainnet'],
+      optionalChains: ['solana:devnet'],
+      methods: ['solana_signTransaction', 'solana_signMessage'],
+      events: ['chainChanged', 'accountsChanged']
+    });
+
+    // Ottieni l'account
+    const accounts = provider.accounts;
+    if (accounts && accounts.length > 0) {
+      walletPublicKey = accounts[0].split(':')[2];
+      alert('✅ Connesso via WalletConnect: ' + walletPublicKey);
+      window.location.href = 'create.html';
+    } else {
+      throw new Error('Nessun account trovato');
     }
-    
-    throw new Error('Nessun account trovato');
-    
+
   } catch (e) {
     console.error('WalletConnect error:', e);
     alert('❌ WalletConnect fallito: ' + e.message);
     window.location.href = 'wallet.html';
-  } finally {
-    isConnecting = false;
   }
 }
 
@@ -108,7 +97,7 @@ window.connectWallet = async function() {
     }
   }
 
-  // 2. WalletConnect con QR
+  // 2. WalletConnect
   await connectWalletConnect();
 };
 
@@ -125,7 +114,6 @@ window.selectWallet = function(walletName) {
     '2. Scansiona il QR con l\'app del wallet.\n' +
     '3. Approva la connessione.'
   );
-  // Chiama WalletConnect
   window.connectWallet();
 };
 
@@ -202,14 +190,11 @@ window.prevStep = function() {
 // ===== INIZIALIZZA STEP =====
 if (steps.length) window.showStep(0);
 
-// ===== CHIUDI MENU CLICCANDO FUORI =====
+// ===== CHIUDI MENU =====
 document.addEventListener('click', function(e) {
   const wrapper = document.querySelector('.menu-wrapper');
   const menu = document.getElementById('dropdownMenu');
   if (wrapper && menu && !wrapper.contains(e.target)) menu.classList.remove('open');
 });
 
-console.log('✅ main.js caricato correttamente');
-console.log('window.connectWallet:', typeof window.connectWallet);
-console.log('window.selectWallet:', typeof window.selectWallet);
-console.log('window.createCoin:', typeof window.createCoin);
+console.log('✅ main.js caricato');
