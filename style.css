@@ -308,3 +308,116 @@ footer {
 .faq-item h3 { color: #22d1f8; margin-bottom: 6px; font-size: 19px; }
 .how-to-list { list-style: none; margin: 16px 0; }
 .how-to-list li { padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 16px; }
+/* ===== WALLET MODAL ===== */
+.wallet-modal {
+  max-width: 420px;
+  margin: 40px auto;
+  padding: 36px 28px;
+  text-align: center;
+}
+
+.wallet-modal h2 {
+  margin-bottom: 8px;
+  font-size: 28px;
+  color: #22d1f8;
+}
+
+.wallet-sub {
+  color: #8899bb;
+  margin-bottom: 24px;
+  font-size: 14px;
+}
+
+.wallet-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.wallet-category {
+  text-align: left;
+  font-size: 13px;
+  color: #667;
+  margin: 16px 0 8px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.wallet-btn {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  background: rgba(255,255,255,0.04);
+  color: #fff;
+  padding: 14px 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.06);
+  font-size: 15px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.wallet-btn:hover {
+  background: rgba(255,255,255,0.10);
+  border-color: #22d1f8;
+  transform: scale(1.01);
+}
+
+.wallet-btn img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+.qr-section {
+  margin: 20px 0 16px;
+  padding: 16px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 16px;
+}
+
+.qr-label {
+  color: #8899bb;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.wallet-modal .back {
+  background: transparent;
+  color: #22d1f8;
+  border: none;
+  padding: 10px 20px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.wallet-modal .back:hover {
+  text-decoration: underline;
+}
+
+/* ===== WALLET CONNECTED STATE ===== */
+.connect-btn.connected {
+  background: #4cdcc1 !important;
+  color: #0b1022 !important;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 480px) {
+  .wallet-modal {
+    margin: 20px 10px;
+    padding: 24px 16px;
+  }
+  
+  .wallet-btn {
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+  
+  .wallet-btn img {
+    width: 24px;
+    height: 24px;
+  }
+}
