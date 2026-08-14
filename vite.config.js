@@ -22,12 +22,5 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, 'src'),
     }
-  },
-  optimizeDeps: {
-    include: [
-      '@walletconnect/modal',
-      '@walletconnect/universal-provider',
-      '@walletconnect/utils'
-    ]
   }
 });
