@@ -2,9 +2,7 @@ import { defineConfig } from 'vite';
 import path from 'path';
 
 export default defineConfig({
-  server: {
-    port: 3000,
-  },
+  server: { port: 3000 },
   build: {
     outDir: 'dist',
     emptyOutDir: true,
@@ -22,5 +20,12 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, 'src'),
     }
+  },
+  optimizeDeps: {
+    include: [
+      '@web3modal/ethers',
+      '@web3modal/core',
+      '@walletconnect/universal-provider'
+    ]
   }
 });
