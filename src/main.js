@@ -12,13 +12,13 @@ window.toggleMenu = function() {
   if (menu) menu.classList.toggle('open');
 };
 
-// ===== WEB3MODAL (COME UNISWAP) =====
+// ===== WEB3MODAL V4 =====
 let web3modal = null;
 
 async function initWeb3Modal() {
   if (!web3modal) {
     try {
-      // Configurazione come Uniswap
+      // Configurazione per Web3Modal v4
       const config = {
         projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
         themeMode: 'dark',
@@ -28,43 +28,41 @@ async function initWeb3Modal() {
           '--w3m-accent-color': '#22d1f8',
           '--w3m-border-radius': '16px',
         },
-        // Metadati come Uniswap
         metadata: {
           name: 'LaunchCoin',
           description: 'Solana Token Creator',
           url: window.location.origin,
           icons: ['https://launchcoin.io/logo.png'],
         },
-        // DEFAULT CHAIN (necessario per ethers)
-        defaultChain: {
-          id: 1,
-          name: 'Ethereum',
-          nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-          rpcUrls: {
-            default: {
-              http: ['https://cloudflare-eth.com'],
-            },
+        // V4 usa ethersConfig
+        ethersConfig: defaultConfig({
+          metadata: {
+            name: 'LaunchCoin',
+            description: 'Solana Token Creator',
+            url: window.location.origin,
+            icons: ['https://launchcoin.io/logo.png'],
           },
-        },
-        // Config come Uniswap
+          defaultChainId: 1,
+          rpcUrl: 'https://cloudflare-eth.com',
+        }),
+        // Abilita wallet
         enableWalletConnect: true,
         enableCoinbase: true,
         enableInjected: true,
-        enableEIP6963: true,
         walletConnectVersion: 2,
-        // Include solo i wallet più popolari
+        // Wallet popolari
         includeWalletIds: [
-          'c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96', // Phantom
-          '225affb176778569276e484e1b92637ad061b01e13a048b35a9d280c3b58970f', // Solflare
-          '4622a2b2d6af1c9844944291e5e7351a6aa24cd7b23099efac1b2fd875da31a0', // Trust
-          '1ae92b26df02f0abca6304df07debccd18262fdf5fe82daa81593582dac9a369', // Coinbase
-          'c03dfee351b6fcc421b4494ea33b9d4b92a7f33d6df5c43ee76267edfceed3a2', // MetaMask
-          'f2436c67184f158d1beda5df5327ee9bad2c749486aac4bf5e18b4eab0aebc45', // Binance
+          'c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96',
+          '225affb176778569276e484e1b92637ad061b01e13a048b35a9d280c3b58970f',
+          '4622a2b2d6af1c9844944291e5e7351a6aa24cd7b23099efac1b2fd875da31a0',
+          '1ae92b26df02f0abca6304df07debccd18262fdf5fe82daa81593582dac9a369',
+          'c03dfee351b6fcc421b4494ea33b9d4b92a7f33d6df5c43ee76267edfceed3a2',
+          'f2436c67184f158d1beda5df5327ee9bad2c749486aac4bf5e18b4eab0aebc45',
         ],
       };
       
       web3modal = await createWeb3Modal(config);
-      console.log('✅ Web3Modal inizializzato');
+      console.log('✅ Web3Modal v4 inizializzato');
     } catch (e) {
       console.error('❌ Web3Modal error:', e);
       throw e;
@@ -73,11 +71,11 @@ async function initWeb3Modal() {
   return web3modal;
 }
 
-// ===== CONNECT WALLET (MAIN) =====
+// ===== CONNECT WALLET =====
 window.connectWallet = async function() {
   console.log('🔵 connectWallet chiamata');
   
-  // 1. Prova Phantom (estensione PC/Kiwi)
+  // 1. Prova Phantom
   if (window.solana && window.solana.isPhantom) {
     try {
       await window.solana.connect();
@@ -90,37 +88,49 @@ window.connectWallet = async function() {
     }
   }
 
-  // 2. Usa Web3Modal (come Uniswap)
+  // 2. Web3Modal
   try {
     const modal = await initWeb3Modal();
     await modal.open();
     
-    // Web3Modal gestisce la connessione automaticamente
-    // Attendiamo che l'utente si connetta
+    // Web3Modal gestisce la connessione
     await new Promise((resolve) => {
       const unsubscribe = modal.subscribeEvents((event) => {
         if (event.type === 'connected') {
           console.log('✅ Connesso!', event.data);
           unsubscribe();
-          resolve(event.data);
+          resolve();
         }
         if (event.type === 'modal_closed') {
           console.log('❌ Modale chiuso');
           unsubscribe();
-          resolve(null);
+          resolve();
         }
       });
     });
     
-    // Dopo la connessione, reindirizziamo
-    alert('✅ Connessione completata!');
-    window.location.href = 'create.html';
+    // Simula una connessione (per la demo)
+    // In realtà, Web3Modal per Solana richiede configurazioni specifiche
+    // Per ora, usiamo questa soluzione di fallback
+    if (!walletPublicKey) {
+      // Se Web3Modal non restituisce la chiave, proviamo a prenderla da Phantom
+      if (window.solana && window.solana.publicKey) {
+        walletPublicKey = window.solana.publicKey.toString();
+        alert('✅ Connesso: ' + walletPublicKey);
+        window.location.href = 'create.html';
+        return;
+      }
+      // Altrimenti, andiamo a wallet.html
+      alert('⚠️ Connessione avviata. Seleziona il wallet dal modal aperto.');
+      window.location.href = 'wallet.html';
+    }
     
   } catch (e) {
     console.error('❌ Web3Modal error:', e);
     alert(
       '❌ Connessione fallita: ' + e.message + '\n\n' +
-      'Usa Phantom su PC (estensione) o Kiwi Browser su telefono.'
+      'Usa Phantom su PC (estensione) o Kiwi Browser su telefono.\n' +
+      'Altri wallet via WalletConnect.'
     );
     window.location.href = 'wallet.html';
   }
@@ -133,10 +143,7 @@ window.selectWallet = function(walletName) {
     window.connectWallet();
     return;
   }
-  alert(
-    '⚠️ Wallet "' + walletName + '" verrà connesso tramite WalletConnect.\n\n' +
-    'Clicca "Connetti" e scegli il wallet.'
-  );
+  alert('⚠️ Wallet "' + walletName + '" via WalletConnect.');
   window.connectWallet();
 };
 
@@ -210,3 +217,4 @@ document.addEventListener('click', function(e) {
 });
 
 console.log('✅ main.js caricato');
+console.log('🔵 connectWallet:', typeof window.connectWallet);
