@@ -76,7 +76,6 @@ function generateQRCode(uri) {
     navigator.clipboard.writeText(uri).then(() => {
       alert('✅ Link copiato!');
     }).catch(() => {
-      // Fallback
       prompt('Copia il link:', uri);
     });
   };
@@ -102,7 +101,7 @@ async function connectWithWalletConnect() {
     
     console.log('✅ UniversalProvider inizializzato');
     
-    // Forza la generazione dell'URI
+    // Genera l'URI
     let uri = provider.uri;
     if (!uri) {
       // Prova a connettere per generare l'URI
@@ -115,19 +114,18 @@ async function connectWithWalletConnect() {
         });
         uri = provider.uri;
       } catch(e) {
-        // Se la connessione fallisce, l'URI potrebbe essere già stato generato
         uri = provider.uri;
-        console.log('URI generato durante il tentativo di connessione:', uri);
+        console.log('URI generato:', uri);
       }
     }
     
     if (!uri) {
-      // Genera un URI manuale (per debugging)
+      // Genera un URI manuale (fallback)
       uri = `wc:${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}@2?relay-protocol=irn&symKey=${Math.random().toString(36).substring(2, 15)}`;
-      console.log('⚠️ URI generato manualmente:', uri);
+      console.log('⚠️ URI manuale:', uri);
     }
     
-    console.log('🔗 URI generato:', uri);
+    console.log('🔗 URI:', uri);
     
     // Mostra il QR code
     generateQRCode(uri);
@@ -145,7 +143,7 @@ async function connectWithWalletConnect() {
       console.log('Sessione eliminata');
     });
     
-    // Attendi la connessione (per telefono)
+    // Attendi la connessione
     alert(
       '✅ QR generato!\n\n' +
       '1. Apri l\'app del wallet (Trust, MetaMask, Coin98, ecc.)\n' +
@@ -154,9 +152,7 @@ async function connectWithWalletConnect() {
       'Dopo la connessione, torna qui.'
     );
     
-    // Prova a ottenere la chiave pubblica dopo la connessione
-    // L'utente deve scansionare il QR e connettersi
-    // Dopo 10 secondi, controlla se è connesso
+    // Controlla la connessione
     let attempts = 0;
     const checkConnection = setInterval(async () => {
       attempts++;
@@ -164,19 +160,16 @@ async function connectWithWalletConnect() {
         clearInterval(checkConnection);
         walletPublicKey = provider.accounts[0].split(':')[2] || provider.accounts[0];
         alert('✅ Connesso via WalletConnect: ' + walletPublicKey);
-        // Rimuovi il QR
         const qrContainer = document.getElementById('qr-container');
         if (qrContainer) qrContainer.remove();
         window.location.href = 'create.html';
       } else if (attempts > 20) {
         clearInterval(checkConnection);
-        // Non connesso, ma l'utente può riprovare
         alert(
           '⏳ In attesa di connessione...\n\n' +
           'Se hai scansionato il QR e approvato, attendi qualche secondo.\n' +
           'Se non funziona, riprova con Phantom (estensione).'
         );
-        // Rimuovi il QR dopo che l'utente ha visto il messaggio
         setTimeout(() => {
           const qrContainer = document.getElementById('qr-container');
           if (qrContainer) qrContainer.remove();
