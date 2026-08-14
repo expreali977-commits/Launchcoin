@@ -23,9 +23,8 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: [
-      '@web3modal/ethers',
-      '@web3modal/core',
-      '@walletconnect/universal-provider'
+      '@walletconnect/universal-provider',
+      '@walletconnect/modal'
     ]
   }
 });
