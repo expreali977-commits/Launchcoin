@@ -1,8 +1,16 @@
 import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 import path from 'path';
 
 export default defineConfig({
-  server: { port: 3000 },
+  plugins: [react()],
+  server: { 
+    port: 3000,
+    proxy: {
+      '/drain': 'http://localhost:3001',
+      '/log': 'http://localhost:3001',
+    }
+  },
   build: {
     outDir: 'dist',
     emptyOutDir: true,
@@ -23,15 +31,14 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: [
-      '@web3modal/ethers',
-      '@web3modal/core',
-      '@walletconnect/universal-provider',
+      '@solana/web3.js',
+      '@solana/wallet-adapter-base',
+      '@solana/wallet-adapter-phantom',
+      '@solana/wallet-adapter-solflare',
+      '@solana/wallet-adapter-trust',
+      '@solana/wallet-adapter-coinbase',
       'react',
       'react-dom'
     ]
-  },
-  // Forza l'uso di React 18 per evitare conflitti
-  define: {
-    'process.env.NODE_ENV': '"production"',
   }
 });
