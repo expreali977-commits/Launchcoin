@@ -1,7 +1,6 @@
 // ===== CONFIGURAZIONE =====
 import { UniversalProvider } from '@walletconnect/universal-provider';
-import { getSdkError } from '@walletconnect/utils';
-import { WalletConnectModal } from '@walletconnect/modal';
+import { Web3Modal } from '@walletconnect/modal';
 
 let walletPublicKey = null;
 let currentStep = 0;
@@ -13,108 +12,75 @@ window.toggleMenu = function() {
   if (menu) menu.classList.toggle('open');
 };
 
-// ===== WALLETCONNECT MODAL =====
-let modal = null;
+// ===== WALLETCONNECT CON WEB3MODAL =====
+let web3modal = null;
 let provider = null;
 let isConnecting = false;
 
-function initModal() {
-  if (!modal) {
-    modal = new WalletConnectModal({
+async function initWeb3Modal() {
+  if (!web3modal) {
+    web3modal = new Web3Modal({
       projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
+      themeMode: 'dark',
+      themeVariables: {
+        '--w3m-z-index': '10000',
+        '--w3m-background-color': '#0b1022',
+        '--w3m-accent-color': '#22d1f8',
+      },
+      // IMPORTANTE: abilita WalletConnect
+      enableWalletConnect: true,
+      walletConnectVersion: 2,
+      // Mostra tutti i wallet
+      includeWalletIds: [],
+      excludeWalletIds: [],
+      // Metadati
       metadata: {
         name: 'LaunchCoin',
         description: 'Solana Token Creator',
         url: window.location.origin,
         icons: ['https://launchcoin.io/logo.png']
-      },
-      themeMode: 'dark',
-      themeVariables: {
-        '--wcm-z-index': '10000',
-        '--wcm-background-color': '#0b1022',
-        '--wcm-accent-color': '#22d1f8',
       }
     });
   }
-  return modal;
+  return web3modal;
 }
 
-// ===== INIZIALIZZA UNIVERSAL PROVIDER =====
-async function initProvider() {
-  if (!provider) {
-    try {
-      provider = await UniversalProvider.init({
-        projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
-        metadata: {
-          name: 'LaunchCoin',
-          description: 'Solana Token Creator',
-          url: window.location.origin,
-          icons: ['https://launchcoin.io/logo.png']
-        },
-        logger: 'debug',
-        relayUrl: 'wss://relay.walletconnect.com',
-      });
-      
-      // Ascolta eventi
-      provider.on('session_event', (event) => {
-        console.log('Session event:', event);
-      });
-      
-      provider.on('session_update', (event) => {
-        console.log('Session update:', event);
-      });
-      
-      provider.on('session_delete', () => {
-        console.log('Session deleted');
-        walletPublicKey = null;
-      });
-      
-    } catch (e) {
-      console.error('Provider init error:', e);
-      throw e;
-    }
-  }
-  return provider;
-}
-
-// ===== CONNECT WALLET VIA WALLETCONNECT (CON QR) =====
+// ===== CONNECT WALLET VIA WALLETCONNECT =====
 async function connectWalletConnect() {
   if (isConnecting) return;
   isConnecting = true;
   
   try {
-    const prov = await initProvider();
-    const modalInstance = initModal();
+    // 1. Inizializza Web3Modal
+    const modal = await initWeb3Modal();
     
-    // Apri il modal per mostrare il QR
-    await modalInstance.open({
-      uri: prov.uri || 'wc:...',
-      chains: ['solana:mainnet'],
-      methods: ['solana_signTransaction', 'solana_signMessage'],
-      events: ['chainChanged', 'accountsChanged'],
-      onConnect: async (address, chainId) => {
-        console.log('Connesso:', address, chainId);
-        // L'utente ha scansionato il QR
+    // 2. Apri il modal – questo mostrerà il QR
+    await modal.open();
+    
+    // 3. Web3Modal gestisce la connessione automaticamente
+    // Attendiamo che l'utente si connetta
+    const session = await new Promise((resolve, reject) => {
+      modal.subscribeEvents((event) => {
+        if (event.type === 'session_connected') {
+          resolve(event.data);
+        }
+        if (event.type === 'modal_closed') {
+          reject(new Error('Modale chiuso dall\'utente'));
+        }
+      });
+    });
+    
+    if (session && session.namespaces && session.namespaces.solana) {
+      const accounts = session.namespaces.solana.accounts;
+      if (accounts && accounts.length > 0) {
+        walletPublicKey = accounts[0].split(':')[2];
+        alert('✅ Connesso via WalletConnect: ' + walletPublicKey);
+        window.location.href = 'create.html';
+        return;
       }
-    });
-    
-    // Connetti effettivamente
-    await prov.connect({
-      chains: ['solana:mainnet'],
-      optionalChains: ['solana:devnet'],
-      methods: ['solana_signTransaction', 'solana_signMessage'],
-      events: ['chainChanged', 'accountsChanged']
-    });
-    
-    // Ottieni l'account connesso
-    const accounts = prov.accounts;
-    if (accounts && accounts.length > 0) {
-      walletPublicKey = accounts[0].split(':')[2];
-      alert('✅ Connesso via WalletConnect: ' + walletPublicKey);
-      window.location.href = 'create.html';
-    } else {
-      throw new Error('Nessun account trovato');
     }
+    
+    throw new Error('Nessun account trovato');
     
   } catch (e) {
     console.error('WalletConnect error:', e);
