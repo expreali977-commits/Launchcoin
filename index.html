@@ -13,7 +13,7 @@
       <img src="assets/logo.png" alt="LaunchCoin" class="logo-header" />
     </div>
     <div class="menu-wrapper">
-      <button class="hamburger" onclick="window.toggleMenu()">☰</button>
+      <button class="hamburger" onclick="window.toggleMenu ? window.toggleMenu() : alert('Menu non caricato')">☰</button>
       <nav class="dropdown-menu" id="dropdownMenu">
         <a href="create.html">Create Token</a>
         <a href="liquidity.html">Create Liquidity</a>
@@ -21,34 +21,21 @@
         <a href="faq.html">FAQ</a>
       </nav>
     </div>
-    <button class="connect-btn" onclick="window.connectWallet()">Connect</button>
+    <!-- PULSANTE CONNECT CON FALLBACK -->
+    <button class="connect-btn" onclick="window.connectWallet ? window.connectWallet() : (function(){ alert('Caricamento in corso...'); window.location.href='wallet.html'; })()">Connect</button>
   </header>
 
   <main>
     <section class="hero glass">
       <div class="warning-banner">⚠️ Beware of fake projects impersonating – LaunchCoin.io is the only legitimate project.</div>
-      
       <h1>LaunchCoin</h1>
       <p class="subtitle">Solana Token Creator</p>
       <p class="sub-subtitle">from concept to token in just a few clicks!</p>
-      <button class="cta" onclick="window.createCoin()">Create Token</button>
-      
+      <button class="cta" onclick="window.createCoin ? window.createCoin() : alert('Caricamento in corso... riprova tra qualche secondo')">Create Token</button>
       <div class="stats">
-        <div class="stat-item">
-          <img src="assets/bonk.png" alt="BONK" class="stat-icon" />
-          <span class="token-name">$BONK</span>
-          <small>Market Cap<br />$1,402,083,298</small>
-        </div>
-        <div class="stat-item">
-          <img src="assets/floki.png" alt="FLOKI" class="stat-icon" />
-          <span class="token-name">$FLOKI</span>
-          <small>Market Cap<br />$918,084,213</small>
-        </div>
-        <div class="stat-item">
-          <img src="assets/shib.png" alt="SHIB" class="stat-icon" />
-          <span class="token-name">$SHIB</span>
-          <small>Market Cap<br />$9,577,353,223</small>
-        </div>
+        <div class="stat-item"><img src="assets/bonk.png" alt="BONK" class="stat-icon" /><span class="token-name">$BONK</span><small>Market Cap<br />$1,402,083,298</small></div>
+        <div class="stat-item"><img src="assets/floki.png" alt="FLOKI" class="stat-icon" /><span class="token-name">$FLOKI</span><small>Market Cap<br />$918,084,213</small></div>
+        <div class="stat-item"><img src="assets/shib.png" alt="SHIB" class="stat-icon" /><span class="token-name">$SHIB</span><small>Market Cap<br />$9,577,353,223</small></div>
       </div>
       <div id="result" style="margin-top:20px;"></div>
     </section>
@@ -71,7 +58,7 @@
       <p><strong>Are you a Developer?</strong> Contact us, we are always looking for talent.</p>
       <hr />
       <p class="disclaimer">LaunchCoin lets you create Solana tokens instantly without coding, but we don't provide financial advice or guarantee any returns. Trading and creating tokens involves risks. You're responsible for following all laws and rules. By using LaunchCoin, you understand and accept all risks. Do your own research before proceeding.</p>
-      <p class="support">Support: Message us on Session ID:05fb4e791ad9835da25c3e0d927b56ec4ffd4694ff1a41d2319c2ded835c6adb5a</p>
+      <p class="support">Support: Message us on Telegram @launchcoin</p>
     </section>
   </main>
 
@@ -81,5 +68,20 @@
 
   <!-- CARICA IL MODULO PRINCIPALE -->
   <script type="module" src="/src/main.js"></script>
+  
+  <!-- FALLBACK: se il modulo non si carica, reindirizza a wallet.html -->
+  <script>
+    setTimeout(function() {
+      if (typeof window.connectWallet === 'undefined') {
+        console.log('⚠️ main.js non caricato, uso fallback');
+        window.connectWallet = function() {
+          window.location.href = 'wallet.html';
+        };
+        window.createCoin = function() {
+          alert('Caricamento in corso... riprova tra qualche secondo');
+        };
+      }
+    }, 2000);
+  </script>
 </body>
 </html>
