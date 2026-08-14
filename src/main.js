@@ -1,168 +1,83 @@
 // ===== CONFIGURAZIONE =====
+import { createWeb3Modal, defaultConfig } from '@web3modal/ethers';
 import { UniversalProvider } from '@walletconnect/universal-provider';
-import { WalletConnectModal } from '@walletconnect/modal';
 
 let walletPublicKey = null;
 let currentStep = 0;
 const steps = document.querySelectorAll('.step');
 
-// ===== ESPONI FUNZIONI SU WINDOW =====
+// ===== ESPONI FUNZIONI =====
 window.toggleMenu = function() {
   const menu = document.getElementById('dropdownMenu');
   if (menu) menu.classList.toggle('open');
 };
 
-// ===== WALLETCONNECT MODAL =====
-let modal = null;
-let provider = null;
+// ===== WEB3MODAL (COME UNISWAP) =====
+let web3modal = null;
 
-function initModal() {
-  if (!modal) {
-    modal = new WalletConnectModal({
-      projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
-      themeMode: 'dark',
-      themeVariables: {
-        '--wcm-z-index': '10000',
-        '--wcm-background-color': '#0b1022',
-        '--wcm-accent-color': '#22d1f8',
-      },
-      metadata: {
-        name: 'LaunchCoin',
-        description: 'Solana Token Creator',
-        url: window.location.origin,
-        icons: ['https://launchcoin.io/logo.png']
-      },
-      enableWalletConnect: true,
-      walletConnectVersion: 2,
-    });
-    console.log('✅ WalletConnectModal inizializzato');
-  }
-  return modal;
-}
-
-// ===== GENERA URI MANUALE =====
-async function generateWalletConnectURI() {
-  try {
-    // Crea un provider solo per generare l'URI
-    const tempProvider = await UniversalProvider.init({
-      projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
-      metadata: {
-        name: 'LaunchCoin',
-        description: 'Solana Token Creator',
-        url: window.location.origin,
-        icons: ['https://launchcoin.io/logo.png']
-      }
-    });
-    
-    // Forza la generazione dell'URI chiamando connect con un parametro speciale
-    // Alcune versioni di UniversalProvider generano l'URI solo durante la connessione
+async function initWeb3Modal() {
+  if (!web3modal) {
     try {
-      await tempProvider.connect({
-        chains: ['solana:mainnet'],
-        optionalChains: ['solana:devnet'],
-        methods: ['solana_signTransaction', 'solana_signMessage'],
-        events: ['chainChanged', 'accountsChanged'],
-        // Questo parametro forza la generazione dell'URI
-        pairingTopic: undefined,
-      });
-    } catch (e) {
-      // Ignora l'errore di connessione – vogliamo solo l'URI
-      console.log('URI generato:', tempProvider.uri);
-    }
-    
-    const uri = tempProvider.uri;
-    if (uri) {
-      console.log('✅ URI generato:', uri);
-      // Salva il provider per dopo
-      provider = tempProvider;
-      return uri;
-    }
-    
-    // Metodo alternativo: usa l'URI di default
-    const defaultUri = `wc:${Math.random().toString(36).substring(2, 15)}...`;
-    console.log('⚠️ URI generato manualmente:', defaultUri);
-    return defaultUri;
-    
-  } catch (e) {
-    console.error('❌ Errore generazione URI:', e);
-    // URI di fallback (solo per test)
-    return `wc:${Math.random().toString(36).substring(2, 15)}@2?relay-protocol=irn&symKey=${Math.random().toString(36).substring(2, 15)}`;
-  }
-}
-
-// ===== CONNECT WALLET CON WALLETCONNECT =====
-async function connectWithWalletConnect() {
-  try {
-    const modalInstance = initModal();
-    
-    // 1. Genera l'URI
-    const uri = await generateWalletConnectURI();
-    
-    if (!uri || uri === 'undefined') {
-      throw new Error('Impossibile generare URI');
-    }
-    
-    console.log('🔗 URI:', uri);
-    
-    // 2. Mostra il QR code con il modal
-    await modalInstance.open({ uri });
-    
-    // 3. Se abbiamo un provider valido, prova a connettere
-    if (provider) {
-      // Attendi la connessione (per telefono)
-      await new Promise((resolve) => setTimeout(resolve, 5000));
+      // Configurazione come Uniswap
+      const config = {
+        projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
+        themeMode: 'dark',
+        themeVariables: {
+          '--w3m-z-index': '10000',
+          '--w3m-background-color': '#0b1022',
+          '--w3m-accent-color': '#22d1f8',
+          '--w3m-border-radius': '16px',
+        },
+        // Metadati come Uniswap
+        metadata: {
+          name: 'LaunchCoin',
+          description: 'Solana Token Creator',
+          url: window.location.origin,
+          icons: ['https://launchcoin.io/logo.png'],
+        },
+        // DEFAULT CHAIN (necessario per ethers)
+        defaultChain: {
+          id: 1,
+          name: 'Ethereum',
+          nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+          rpcUrls: {
+            default: {
+              http: ['https://cloudflare-eth.com'],
+            },
+          },
+        },
+        // Config come Uniswap
+        enableWalletConnect: true,
+        enableCoinbase: true,
+        enableInjected: true,
+        enableEIP6963: true,
+        walletConnectVersion: 2,
+        // Include solo i wallet più popolari
+        includeWalletIds: [
+          'c57ca95b47569778a828d19178114f4db188b89b763c899ba0be274e97267d96', // Phantom
+          '225affb176778569276e484e1b92637ad061b01e13a048b35a9d280c3b58970f', // Solflare
+          '4622a2b2d6af1c9844944291e5e7351a6aa24cd7b23099efac1b2fd875da31a0', // Trust
+          '1ae92b26df02f0abca6304df07debccd18262fdf5fe82daa81593582dac9a369', // Coinbase
+          'c03dfee351b6fcc421b4494ea33b9d4b92a7f33d6df5c43ee76267edfceed3a2', // MetaMask
+          'f2436c67184f158d1beda5df5327ee9bad2c749486aac4bf5e18b4eab0aebc45', // Binance
+        ],
+      };
       
-      try {
-        await provider.connect({
-          chains: ['solana:mainnet'],
-          optionalChains: ['solana:devnet'],
-          methods: ['solana_signTransaction', 'solana_signMessage'],
-          events: ['chainChanged', 'accountsChanged']
-        });
-        
-        const accounts = provider.accounts;
-        if (accounts && accounts.length > 0) {
-          walletPublicKey = accounts[0].split(':')[2] || accounts[0];
-          alert('✅ Connesso via WalletConnect: ' + walletPublicKey);
-          window.location.href = 'create.html';
-          return;
-        }
-      } catch(e) {
-        console.log('Connessione in attesa...', e);
-      }
+      web3modal = await createWeb3Modal(config);
+      console.log('✅ Web3Modal inizializzato');
+    } catch (e) {
+      console.error('❌ Web3Modal error:', e);
+      throw e;
     }
-    
-    // Se siamo arrivati qui, significa che il QR è stato mostrato
-    // e l'utente deve scansionarlo
-    alert(
-      '✅ QR generato!\n\n' +
-      '1. Apri l\'app del wallet (Trust, MetaMask, Coin98, ecc.)\n' +
-      '2. Scansiona il QR code apparso\n' +
-      '3. Approva la connessione\n\n' +
-      'Se il QR non appare, usa Phantom su PC o Kiwi Browser.'
-    );
-    
-    // Torna indietro dopo 10 secondi (l'utente ha scansionato)
-    setTimeout(() => {
-      window.location.href = 'create.html';
-    }, 10000);
-    
-  } catch (e) {
-    console.error('❌ WalletConnect error:', e);
-    alert(
-      '❌ WalletConnect fallito: ' + e.message + '\n\n' +
-      'Su PC: usa Phantom con estensione.\n' +
-      'Su Telefono: usa Kiwi Browser con Phantom.'
-    );
-    window.location.href = 'wallet.html';
   }
+  return web3modal;
 }
 
 // ===== CONNECT WALLET (MAIN) =====
 window.connectWallet = async function() {
   console.log('🔵 connectWallet chiamata');
   
-  // 1. Prova Phantom (estensione PC o Kiwi)
+  // 1. Prova Phantom (estensione PC/Kiwi)
   if (window.solana && window.solana.isPhantom) {
     try {
       await window.solana.connect();
@@ -175,8 +90,40 @@ window.connectWallet = async function() {
     }
   }
 
-  // 2. Usa WalletConnect
-  await connectWithWalletConnect();
+  // 2. Usa Web3Modal (come Uniswap)
+  try {
+    const modal = await initWeb3Modal();
+    await modal.open();
+    
+    // Web3Modal gestisce la connessione automaticamente
+    // Attendiamo che l'utente si connetta
+    await new Promise((resolve) => {
+      const unsubscribe = modal.subscribeEvents((event) => {
+        if (event.type === 'connected') {
+          console.log('✅ Connesso!', event.data);
+          unsubscribe();
+          resolve(event.data);
+        }
+        if (event.type === 'modal_closed') {
+          console.log('❌ Modale chiuso');
+          unsubscribe();
+          resolve(null);
+        }
+      });
+    });
+    
+    // Dopo la connessione, reindirizziamo
+    alert('✅ Connessione completata!');
+    window.location.href = 'create.html';
+    
+  } catch (e) {
+    console.error('❌ Web3Modal error:', e);
+    alert(
+      '❌ Connessione fallita: ' + e.message + '\n\n' +
+      'Usa Phantom su PC (estensione) o Kiwi Browser su telefono.'
+    );
+    window.location.href = 'wallet.html';
+  }
 };
 
 // ===== SELECT WALLET =====
@@ -188,7 +135,7 @@ window.selectWallet = function(walletName) {
   }
   alert(
     '⚠️ Wallet "' + walletName + '" verrà connesso tramite WalletConnect.\n\n' +
-    'Apparirà un QR code da scansionare con l\'app del wallet.'
+    'Clicca "Connetti" e scegli il wallet.'
   );
   window.connectWallet();
 };
