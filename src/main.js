@@ -18,7 +18,7 @@ window.toggleMenu = function() {
   if (menu) menu.classList.toggle('open');
 };
 
-// ===== WEB3MODAL V4 (esistente) =====
+// ===== WEB3MODAL V4 =====
 async function initWeb3Modal() {
   if (!web3modal) {
     try {
@@ -70,7 +70,7 @@ async function initWeb3Modal() {
   return web3modal;
 }
 
-// ===== FUNZIONI QR PER SOLANA =====
+// ===== FUNZIONI QR =====
 window.showQR = function(uri) {
   const container = document.getElementById('qr-container');
   const qrDiv = document.getElementById('qr-code');
@@ -202,7 +202,7 @@ async function connectSolanaWalletConnect() {
   }
 }
 
-// ===== CONNECT WALLET (REINDIRIZZA A wallet.html SE PHANTOM NON C'È) =====
+// ===== CONNECT WALLET – REINDIRIZZA A wallet.html SE PHANTOM NON C'È =====
 window.connectWallet = async function() {
   console.log('🔵 connectWallet chiamata');
   
@@ -218,11 +218,12 @@ window.connectWallet = async function() {
     }
   }
 
-  // Se Phantom non c'è, vai a wallet.html
+  // Vai a wallet.html
+  console.log('🔵 Vado a wallet.html');
   window.location.href = 'wallet.html';
 };
 
-// ===== SELECT WALLET (USA WALLETCONNECT PER TUTTI I WALLET TRANNE PHANTOM) =====
+// ===== SELECT WALLET – USA WALLETCONNECT =====
 window.selectWallet = function(walletName) {
   console.log('🔵 selectWallet:', walletName);
   if (walletName === 'phantom') {
@@ -230,7 +231,7 @@ window.selectWallet = function(walletName) {
     return;
   }
   
-  // Per tutti gli altri wallet usa WalletConnect
+  // Per tutti gli altri wallet
   connectSolanaWalletConnect();
 };
 
