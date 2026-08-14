@@ -70,7 +70,6 @@ async function connectSolanaWalletConnect() {
   isConnecting = true;
   
   try {
-    // Inizializza UniversalProvider per Solana
     solanaProvider = await UniversalProvider.init({
       projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
       metadata: {
@@ -83,7 +82,6 @@ async function connectSolanaWalletConnect() {
     
     console.log('✅ UniversalProvider Solana inizializzato');
     
-    // Genera l'URI
     let uri = solanaProvider.uri;
     if (!uri) {
       try {
@@ -108,24 +106,12 @@ async function connectSolanaWalletConnect() {
     
     console.log('🔗 URI Solana:', uri);
     
-    // Mostra il QR
     window.showQR(uri);
     
-    // Ascolta eventi
-    solanaProvider.on('session_event', (event) => {
-      console.log('Evento sessione:', event);
-    });
+    solanaProvider.on('session_event', (event) => { console.log('Evento:', event); });
+    solanaProvider.on('session_update', (event) => { console.log('Aggiornamento:', event); });
+    solanaProvider.on('session_delete', () => { window.closeQR(); });
     
-    solanaProvider.on('session_update', (event) => {
-      console.log('Aggiornamento sessione:', event);
-    });
-    
-    solanaProvider.on('session_delete', () => {
-      console.log('Sessione eliminata');
-      window.closeQR();
-    });
-    
-    // Controlla la connessione
     if (qrCheckInterval) clearInterval(qrCheckInterval);
     qrCheckInterval = setInterval(async () => {
       try {
@@ -137,25 +123,23 @@ async function connectSolanaWalletConnect() {
           alert('✅ Connesso a Solana via WalletConnect: ' + walletPublicKey);
           window.location.href = 'create.html';
         }
-      } catch(e) {
-        console.log('Attesa connessione Solana...');
-      }
+      } catch(e) { console.log('Attesa...'); }
     }, 2000);
     
   } catch (e) {
-    console.error('❌ WalletConnect Solana error:', e);
-    alert('❌ WalletConnect Solana fallito: ' + e.message + '\n\nUsa Phantom su PC o Kiwi Browser su telefono.');
+    console.error('❌ WalletConnect error:', e);
+    alert('❌ WalletConnect fallito: ' + e.message);
     window.location.href = 'wallet.html';
   } finally {
     isConnecting = false;
   }
 }
 
-// ===== CONNECT WALLET =====
+// ===== CONNECT WALLET – MOSTRA DIRETTAMENTE LA LISTA WALLET =====
 window.connectWallet = async function() {
   console.log('🔵 connectWallet chiamata');
   
-  // 1. Prova Phantom (estensione PC/Kiwi)
+  // Se Phantom è installato, connetti direttamente
   if (window.solana && window.solana.isPhantom) {
     try {
       await window.solana.connect();
@@ -168,7 +152,8 @@ window.connectWallet = async function() {
     }
   }
 
-  // 2. Se Phantom non c'è, vai a wallet.html
+  // Altrimenti, vai a wallet.html per la lista
+  console.log('🔵 Vado a wallet.html');
   window.location.href = 'wallet.html';
 };
 
@@ -176,7 +161,6 @@ window.connectWallet = async function() {
 window.selectWallet = function(walletName) {
   console.log('🔵 selectWallet:', walletName);
   if (walletName === 'phantom') {
-    // Se Phantom, prova connessione diretta
     if (window.solana && window.solana.isPhantom) {
       window.connectWallet();
     } else {
@@ -184,8 +168,7 @@ window.selectWallet = function(walletName) {
     }
     return;
   }
-  
-  // Per tutti gli altri wallet (Trust, Coin98, MetaMask, ecc.)
+  // Per tutti gli altri wallet, usa WalletConnect
   connectSolanaWalletConnect();
 };
 
