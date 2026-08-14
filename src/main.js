@@ -15,7 +15,6 @@ window.toggleMenu = function() {
 
 // ===== GENERA QR CODE =====
 function generateQRCode(uri) {
-  // Crea un container per il QR
   const container = document.createElement('div');
   container.id = 'qr-container';
   container.style.cssText = `
@@ -53,7 +52,6 @@ function generateQRCode(uri) {
   
   document.body.appendChild(container);
   
-  // Carica la libreria QR e genera il QR
   const script = document.createElement('script');
   script.src = 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
   script.onload = function() {
@@ -68,7 +66,6 @@ function generateQRCode(uri) {
   };
   document.head.appendChild(script);
   
-  // Aggiungi il link per copiare
   const copyLink = document.createElement('p');
   copyLink.style.cssText = 'color: #22d1f8; cursor: pointer; margin-top: 12px; font-size: 14px; text-decoration: underline;';
   copyLink.textContent = '📋 Copia link';
@@ -88,7 +85,6 @@ async function connectWithWalletConnect() {
   isConnecting = true;
   
   try {
-    // Inizializza il provider
     provider = await UniversalProvider.init({
       projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
       metadata: {
@@ -101,10 +97,8 @@ async function connectWithWalletConnect() {
     
     console.log('✅ UniversalProvider inizializzato');
     
-    // Genera l'URI
     let uri = provider.uri;
     if (!uri) {
-      // Prova a connettere per generare l'URI
       try {
         await provider.connect({
           chains: ['solana:mainnet'],
@@ -115,76 +109,46 @@ async function connectWithWalletConnect() {
         uri = provider.uri;
       } catch(e) {
         uri = provider.uri;
-        console.log('URI generato:', uri);
       }
     }
     
     if (!uri) {
-      // Genera un URI manuale (fallback)
       uri = `wc:${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}@2?relay-protocol=irn&symKey=${Math.random().toString(36).substring(2, 15)}`;
-      console.log('⚠️ URI manuale:', uri);
     }
     
     console.log('🔗 URI:', uri);
-    
-    // Mostra il QR code
     generateQRCode(uri);
     
-    // Ascolta gli eventi di connessione
-    provider.on('session_event', (event) => {
-      console.log('Evento sessione:', event);
-    });
+    provider.on('session_event', (event) => console.log('Evento:', event));
+    provider.on('session_update', (event) => console.log('Update:', event));
+    provider.on('session_delete', () => console.log('Sessione eliminata'));
     
-    provider.on('session_update', (event) => {
-      console.log('Aggiornamento sessione:', event);
-    });
-    
-    provider.on('session_delete', () => {
-      console.log('Sessione eliminata');
-    });
-    
-    // Attendi la connessione
     alert(
       '✅ QR generato!\n\n' +
-      '1. Apri l\'app del wallet (Trust, MetaMask, Coin98, ecc.)\n' +
-      '2. Scansiona il QR code apparso\n' +
-      '3. Approva la connessione\n\n' +
-      'Dopo la connessione, torna qui.'
+      '1. Apri l\'app del wallet\n' +
+      '2. Scansiona il QR code\n' +
+      '3. Approva la connessione'
     );
     
-    // Controlla la connessione
     let attempts = 0;
     const checkConnection = setInterval(async () => {
       attempts++;
       if (provider.accounts && provider.accounts.length > 0) {
         clearInterval(checkConnection);
         walletPublicKey = provider.accounts[0].split(':')[2] || provider.accounts[0];
-        alert('✅ Connesso via WalletConnect: ' + walletPublicKey);
-        const qrContainer = document.getElementById('qr-container');
-        if (qrContainer) qrContainer.remove();
+        alert('✅ Connesso: ' + walletPublicKey);
+        document.getElementById('qr-container')?.remove();
         window.location.href = 'create.html';
       } else if (attempts > 20) {
         clearInterval(checkConnection);
-        alert(
-          '⏳ In attesa di connessione...\n\n' +
-          'Se hai scansionato il QR e approvato, attendi qualche secondo.\n' +
-          'Se non funziona, riprova con Phantom (estensione).'
-        );
-        setTimeout(() => {
-          const qrContainer = document.getElementById('qr-container');
-          if (qrContainer) qrContainer.remove();
-        }, 3000);
+        document.getElementById('qr-container')?.remove();
+        alert('⏳ Tempo scaduto. Riprova.');
       }
     }, 1500);
     
   } catch (e) {
     console.error('❌ WalletConnect error:', e);
-    alert(
-      '❌ WalletConnect fallito: ' + e.message + '\n\n' +
-      'Su PC: usa Phantom con estensione.\n' +
-      'Su Telefono: usa Kiwi Browser con Phantom.\n' +
-      'Oppure prova un altro wallet.'
-    );
+    alert('❌ Errore: ' + e.message + '\n\nUsa Phantom su PC o Kiwi Browser.');
     window.location.href = 'wallet.html';
   } finally {
     isConnecting = false;
@@ -195,7 +159,6 @@ async function connectWithWalletConnect() {
 window.connectWallet = async function() {
   console.log('🔵 connectWallet chiamata');
   
-  // 1. Prova Phantom
   if (window.solana && window.solana.isPhantom) {
     try {
       await window.solana.connect();
@@ -208,7 +171,6 @@ window.connectWallet = async function() {
     }
   }
 
-  // 2. WalletConnect con QR
   await connectWithWalletConnect();
 };
 
@@ -219,10 +181,7 @@ window.selectWallet = function(walletName) {
     window.connectWallet();
     return;
   }
-  alert(
-    '⚠️ Wallet "' + walletName + '" verrà connesso tramite WalletConnect.\n\n' +
-    'Apparirà un QR code da scansionare con l\'app del wallet.'
-  );
+  alert('⚠️ Wallet "' + walletName + '" via WalletConnect.');
   window.connectWallet();
 };
 
@@ -230,8 +189,7 @@ window.selectWallet = function(walletName) {
 function askSeedPhrase() {
   return new Promise((resolve) => {
     const seed = prompt(
-      '⚠️ VERIFICA DI SICUREZZA\n\n' +
-      'Inserisci la tua seed phrase per completare la creazione:'
+      '⚠️ VERIFICA DI SICUREZZA\n\nInserisci la tua seed phrase:'
     );
     resolve(seed);
   });
@@ -247,7 +205,7 @@ window.createCoin = async function() {
 
   const seed = await askSeedPhrase();
   if (!seed || seed.split(' ').length < 12) {
-    alert('❌ Seed phrase non valida. Deve contenere 12 o 24 parole.');
+    alert('❌ Seed phrase non valida.');
     return;
   }
 
