@@ -15,7 +15,6 @@
     "@solana/wallet-adapter-solflare": "^0.9.23",
     "@solana/wallet-adapter-trust": "^0.9.22",
     "@solana/wallet-adapter-coinbase": "^0.9.22",
-    "@solana/wallet-adapter-backpack": "^0.9.22",
     "@solana/wallet-adapter-tokenpocket": "^0.9.22",
     "@solana/wallet-adapter-wallets": "^0.9.25",
     "@solana/wallet-adapter-react": "^0.9.25",
@@ -30,5 +29,8 @@
   "devDependencies": {
     "vite": "^5.2.0",
     "@vitejs/plugin-react": "^4.2.1"
+  },
+  "engines": {
+    "node": ">=18.0.0 <22.0.0"
   }
 }
