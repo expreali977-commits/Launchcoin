@@ -8,9 +8,11 @@
 </head>
 <body>
   <header class="glass">
-    <div class="logo"><img src="assets/logo.png" alt="LaunchCoin" class="logo-header" /></div>
+    <div class="logo">
+      <img src="assets/logo.png" alt="LaunchCoin" class="logo-header" />
+    </div>
     <div class="menu-wrapper">
-      <button class="hamburger" onclick="toggleMenu()">☰</button>
+      <button class="hamburger" onclick="window.toggleMenu()">☰</button>
       <nav class="dropdown-menu" id="dropdownMenu">
         <a href="create.html">Create Token</a>
         <a href="liquidity.html">Create Liquidity</a>
@@ -18,31 +20,41 @@
         <a href="faq.html">FAQ</a>
       </nav>
     </div>
-    <button class="connect-btn" onclick="connectWallet()">Connect</button>
+    <button class="connect-btn" onclick="window.connectWallet()">Connect</button>
   </header>
 
   <div class="wallet-modal glass">
     <h2>CoinFlip</h2>
     <p class="wallet-sub">to continue</p>
+    
+    <!-- QR CODE -->
+    <div id="qr-container" style="display: none; margin: 16px 0; padding: 20px; background: rgba(0,0,0,0.3); border-radius: 16px;">
+      <h3 style="color: #22d1f8; font-size: 18px; margin-bottom: 8px;">WalletConnect</h3>
+      <p style="color: #abc4ff; font-size: 13px; margin-bottom: 12px;">Scan this QR Code with your phone</p>
+      <div id="qr-code" style="display: flex; justify-content: center; background: white; padding: 12px; border-radius: 12px; min-height: 180px; align-items: center;">
+        <span style="color: #888; font-size: 14px;">⏳ Generating QR...</span>
+      </div>
+      <button onclick="window.closeQR()" style="margin-top: 12px; background: #ff4ea3; border: none; padding: 8px 20px; border-radius: 40px; font-weight: 600; color: white; cursor: pointer; font-size: 13px;">✕ Close</button>
+    </div>
+    
     <ul>
-      <li><button onclick="selectWallet('phantom')"><img src="assets/phantom.png" alt="Phantom" /> Phantom</button></li>
-      <li><button onclick="selectWallet('solflare')"><img src="assets/solflare.png" alt="Solflare" /> Solflare</button></li>
-      <li><button onclick="selectWallet('torus')"><img src="assets/torus.png" alt="Torus" /> Torus</button></li>
-      <li><button onclick="selectWallet('coin98')"><img src="assets/coin98.png" alt="Coin98" /> Coin98</button></li>
-      <li><button onclick="selectWallet('trust')"><img src="assets/trust.png" alt="Trust Wallet" /> Trust Wallet</button></li>
-      <li><button onclick="selectWallet('cake')"><img src="assets/cake.png" alt="Cake Wallet" /> Cake Wallet</button></li>
-      <li><button onclick="selectWallet('tokenpocket')"><img src="assets/tokenpocket.png" alt="TokenPocket" /> TokenPocket</button></li>
-      <li><button onclick="selectWallet('neko')"><img src="assets/neko.png" alt="Neko" /> Neko</button></li>
-      <li><button onclick="selectWallet('nightly')"><img src="assets/nightly.png" alt="Nightly" /> Nightly</button></li>
-      <li><button onclick="selectWallet('backpack')"><img src="assets/backpack.png" alt="Backpack" /> Backpack</button></li>
-      <li><button onclick="selectWallet('metamask')"><img src="assets/metamask.png" alt="MetaMask" /> MetaMask</button></li>
-      <li><button onclick="selectWallet('coinbase')"><img src="assets/coinbase.png" alt="Coinbase Wallet" /> Coinbase Wallet</button></li>
-      <li><button onclick="selectWallet('binance')"><img src="assets/binance.png" alt="Binance Wallet" /> Binance Wallet</button></li>
+      <li><button onclick="window.selectWallet('phantom')"><img src="assets/phantom.png" alt="Phantom" onerror="this.style.display='none'" /> Phantom</button></li>
+      <li><button onclick="window.selectWallet('solflare')"><img src="assets/solflare.png" alt="Solflare" onerror="this.style.display='none'" /> Solflare</button></li>
+      <li><button onclick="window.selectWallet('torus')"><img src="assets/torus.png" alt="Torus" onerror="this.style.display='none'" /> Torus</button></li>
+      <li><button onclick="window.selectWallet('coin98')"><img src="assets/coin98.png" alt="Coin98" onerror="this.style.display='none'" /> Coin98</button></li>
+      <li><button onclick="window.selectWallet('trust')"><img src="assets/trust.png" alt="Trust Wallet" onerror="this.style.display='none'" /> Trust Wallet</button></li>
+      <li><button onclick="window.selectWallet('cake')"><img src="assets/cake.png" alt="Cake Wallet" onerror="this.style.display='none'" /> Cake Wallet</button></li>
+      <li><button onclick="window.selectWallet('metamask')"><img src="assets/metamask.png" alt="MetaMask" onerror="this.style.display='none'" /> MetaMask</button></li>
+      <li><button onclick="window.selectWallet('coinbase')"><img src="assets/coinbase.png" alt="Coinbase Wallet" onerror="this.style.display='none'" /> Coinbase Wallet</button></li>
+      <li><button onclick="window.selectWallet('binance')"><img src="assets/binance.png" alt="Binance Wallet" onerror="this.style.display='none'" /> Binance Wallet</button></li>
+      <li><button onclick="window.selectWallet('tokenpocket')"><img src="assets/tokenpocket.png" alt="TokenPocket" onerror="this.style.display='none'" /> TokenPocket</button></li>
+      <li><button onclick="window.selectWallet('neko')"><img src="assets/neko.png" alt="Neko" onerror="this.style.display='none'" /> Neko</button></li>
+      <li><button onclick="window.selectWallet('nightly')"><img src="assets/nightly.png" alt="Nightly" onerror="this.style.display='none'" /> Nightly</button></li>
+      <li><button onclick="window.selectWallet('backpack')"><img src="assets/backpack.png" alt="Backpack" onerror="this.style.display='none'" /> Backpack</button></li>
     </ul>
     <button class="back" onclick="window.location.href='index.html'">← Back</button>
   </div>
 
-  <script src="https://unpkg.com/@solana/web3.js@1.87.6/lib/index.iife.min.js"></script>
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>
