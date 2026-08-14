@@ -1,6 +1,4 @@
 // ===== CONFIGURAZIONE =====
-// Usa l'importazione corretta per Web3Modal
-import { createWeb3Modal } from '@walletconnect/modal';
 import { UniversalProvider } from '@walletconnect/universal-provider';
 
 let walletPublicKey = null;
@@ -13,38 +11,12 @@ window.toggleMenu = function() {
   if (menu) menu.classList.toggle('open');
 };
 
-// ===== WALLETCONNECT CON WEB3MODAL =====
-let web3modal = null;
+// ===== WALLETCONNECT CON UNIVERSAL PROVIDER =====
 let provider = null;
 
-async function initWeb3Modal() {
-  if (!web3modal) {
-    web3modal = createWeb3Modal({
-      projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
-      themeMode: 'dark',
-      themeVariables: {
-        '--w3m-z-index': '10000',
-        '--w3m-background-color': '#0b1022',
-        '--w3m-accent-color': '#22d1f8',
-      },
-      metadata: {
-        name: 'LaunchCoin',
-        description: 'Solana Token Creator',
-        url: window.location.origin,
-        icons: ['https://launchcoin.io/logo.png']
-      },
-      // Abilita WalletConnect
-      enableWalletConnect: true,
-      walletConnectVersion: 2,
-    });
-  }
-  return web3modal;
-}
-
-// ===== CONNECT WALLET VIA WALLETCONNECT =====
 async function connectWalletConnect() {
   try {
-    // Usa UniversalProvider direttamente
+    // Inizializza UniversalProvider
     provider = await UniversalProvider.init({
       projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
       metadata: {
@@ -69,14 +41,31 @@ async function connectWalletConnect() {
       walletPublicKey = accounts[0].split(':')[2];
       alert('✅ Connesso via WalletConnect: ' + walletPublicKey);
       window.location.href = 'create.html';
+      return true;
     } else {
       throw new Error('Nessun account trovato');
     }
 
   } catch (e) {
     console.error('WalletConnect error:', e);
-    alert('❌ WalletConnect fallito: ' + e.message);
+    // Mostra l'URI per connettersi manualmente
+    if (provider && provider.uri) {
+      const uri = provider.uri;
+      // Apri il QR in una nuova finestra (fallback)
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(uri)}`;
+      alert(
+        '❌ WalletConnect fallito.\n\n' +
+        'Scansiona questo QR con l\'app del wallet:\n' +
+        qrUrl + '\n\n' +
+        'Oppure usa il link: ' + uri
+      );
+      // Apri il QR in una nuova finestra
+      window.open(qrUrl, '_blank');
+    } else {
+      alert('❌ WalletConnect fallito: ' + e.message);
+    }
     window.location.href = 'wallet.html';
+    return false;
   }
 }
 
@@ -110,9 +99,7 @@ window.selectWallet = function(walletName) {
   }
   alert(
     '⚠️ Wallet "' + walletName + '" verrà connesso tramite WalletConnect.\n\n' +
-    '1. Clicca "Connetti" nel popup che apparirà.\n' +
-    '2. Scansiona il QR con l\'app del wallet.\n' +
-    '3. Approva la connessione.'
+    'Se non funziona, usa Phantom (gratuito) o un wallet compatibile.'
   );
   window.connectWallet();
 };
