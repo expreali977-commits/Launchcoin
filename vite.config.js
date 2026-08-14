@@ -25,9 +25,8 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: [
-      '@walletconnect/core',
-      '@walletconnect/web3wallet',
-      '@walletconnect/universal-provider'
+      '@walletconnect/universal-provider',
+      '@walletconnect/types'
     ]
   }
 });
