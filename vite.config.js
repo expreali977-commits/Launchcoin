@@ -1,9 +1,7 @@
 import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
 import path from 'path';
 
 export default defineConfig({
-  plugins: [react()],
   server: { port: 3000 },
   build: {
     outDir: 'dist',
@@ -11,6 +9,10 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, 'index.html'),
+        create: path.resolve(__dirname, 'create.html'),
+        liquidity: path.resolve(__dirname, 'liquidity.html'),
+        faq: path.resolve(__dirname, 'faq.html'),
+        wallet: path.resolve(__dirname, 'wallet.html'),
       }
     }
   },
@@ -21,9 +23,7 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: [
-      '@solana/wallet-adapter-react',
-      '@solana/wallet-adapter-react-ui',
-      '@solana/wallet-adapter-wallets'
+      '@walletconnect/universal-provider'
     ]
   }
 });
