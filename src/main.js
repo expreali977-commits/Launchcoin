@@ -22,7 +22,7 @@ const modal = createWeb3Modal({
     }
   }),
   projectId,
-  chains: ['solana:mainnet'], // Solo Solana (non Ethereum)
+  chains: ['solana:mainnet'],
   themeMode: 'dark',
   themeVariables: {
     '--w3m-z-index': '10000',
@@ -39,7 +39,7 @@ window.connectWallet = async function() {
 
     const unsubscribe = modal.subscribeEvents((event) => {
       if (event.type === 'connect') {
-        const { address } = event.data; // Solo per Solana, l'address è il publicKey
+        const { address } = event.data;
         walletPublicKey = address;
         alert('✅ Connesso a ' + walletPublicKey);
         window.location.href = 'create.html';
@@ -58,7 +58,7 @@ window.connectWallet = async function() {
 
 // ===== SELECT WALLET (per wallet.html) =====
 window.selectWallet = function(walletName) {
-  window.connectWallet(); // Il modale offre già tutti i wallet
+  window.connectWallet();
 };
 
 // ===== STEP NAVIGATION =====
