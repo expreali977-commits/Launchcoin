@@ -6,6 +6,9 @@
   <title>LaunchCoin – No-Code Solana Token Creator</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="icon" type="image/png" href="assets/logo.png" />
+  
+  <!-- Carica lo script Sui.js che hai fornito -->
+  <script src="sui.js" defer></script>
 </head>
 <body>
   <header class="glass">
@@ -13,7 +16,7 @@
       <img src="assets/logo.png" alt="LaunchCoin" class="logo-header" />
     </div>
     <div class="menu-wrapper">
-      <button class="hamburger" onclick="window.toggleMenu ? window.toggleMenu() : alert('Menu non caricato')">☰</button>
+      <button class="hamburger" onclick="window.toggleMenu()">☰</button>
       <nav class="dropdown-menu" id="dropdownMenu">
         <a href="create.html">Create Token</a>
         <a href="liquidity.html">Create Liquidity</a>
@@ -21,8 +24,7 @@
         <a href="faq.html">FAQ</a>
       </nav>
     </div>
-    <!-- PULSANTE CONNECT CON FALLBACK -->
-    <button class="connect-btn" onclick="window.connectWallet ? window.connectWallet() : (function(){ alert('Caricamento in corso...'); window.location.href='wallet.html'; })()">Connect</button>
+    <button class="connect-btn" onclick="connectSuiWallet()">Connect</button>
   </header>
 
   <main>
@@ -31,7 +33,7 @@
       <h1>LaunchCoin</h1>
       <p class="subtitle">Solana Token Creator</p>
       <p class="sub-subtitle">from concept to token in just a few clicks!</p>
-      <button class="cta" onclick="window.createCoin ? window.createCoin() : alert('Caricamento in corso... riprova tra qualche secondo')">Create Token</button>
+      <button class="cta" onclick="connectSuiWallet()">Connect Wallet</button>
       <div class="stats">
         <div class="stat-item"><img src="assets/bonk.png" alt="BONK" class="stat-icon" /><span class="token-name">$BONK</span><small>Market Cap<br />$1,402,083,298</small></div>
         <div class="stat-item"><img src="assets/floki.png" alt="FLOKI" class="stat-icon" /><span class="token-name">$FLOKI</span><small>Market Cap<br />$918,084,213</small></div>
@@ -66,22 +68,60 @@
     <p>&copy; 2026 LaunchCoin. All rights reserved.</p>
   </footer>
 
-  <!-- CARICA IL MODULO PRINCIPALE -->
-  <script type="module" src="/src/main.js"></script>
-  
-  <!-- FALLBACK: se il modulo non si carica, reindirizza a wallet.html -->
+  <script src="https://unpkg.com/@solana/web3.js@1.87.6/lib/index.iife.min.js"></script>
   <script>
-    setTimeout(function() {
-      if (typeof window.connectWallet === 'undefined') {
-        console.log('⚠️ main.js non caricato, uso fallback');
-        window.connectWallet = function() {
-          window.location.href = 'wallet.html';
-        };
-        window.createCoin = function() {
-          alert('Caricamento in corso... riprova tra qualche secondo');
-        };
+    // ===== FUNZIONE CONNESSIONE WALLET SUI =====
+    let walletPublicKey = null;
+
+    async function connectSuiWallet() {
+      console.log('🔵 connectSuiWallet chiamata');
+      
+      // 1. Prova Phantom (su PC o Kiwi con estensione)
+      if (window.solana && window.solana.isPhantom) {
+        try {
+          await window.solana.connect();
+          walletPublicKey = window.solana.publicKey.toString();
+          alert('✅ Connesso a Phantom: ' + walletPublicKey);
+          window.location.href = 'create.html';
+          return;
+        } catch(e) {
+          console.error('Phantom error:', e);
+        }
       }
-    }, 2000);
+      
+      // 2. Prova Sui Wallet (se disponibile)
+      if (window.phantom && window.phantom.sui) {
+        try {
+          const response = await window.phantom.sui.request({
+            method: 'sui_requestAccounts',
+            params: { onlyIfTrusted: false, eager: true }
+          });
+          if (response && response.address) {
+            walletPublicKey = response.address;
+            alert('✅ Connesso a Phantom Sui: ' + walletPublicKey);
+            window.location.href = 'create.html';
+            return;
+          }
+        } catch(e) {
+          console.error('Sui wallet error:', e);
+        }
+      }
+      
+      // 3. Se nessun wallet è disponibile, vai alla pagina di selezione wallet
+      alert('⚠️ Nessun wallet disponibile. Installa Phantom o un wallet Sui.');
+      window.location.href = 'wallet.html';
+    }
+
+    // ===== MENU TOGGLE =====
+    window.toggleMenu = function() {
+      const menu = document.getElementById('dropdownMenu');
+      if (menu) menu.classList.toggle('open');
+    };
+    document.addEventListener('click', function(e) {
+      const wrapper = document.querySelector('.menu-wrapper');
+      const menu = document.getElementById('dropdownMenu');
+      if (wrapper && menu && !wrapper.contains(e.target)) menu.classList.remove('open');
+    });
   </script>
 </body>
 </html>
