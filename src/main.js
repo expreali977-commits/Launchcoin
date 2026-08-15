@@ -1,4 +1,4 @@
-// ===== main.js – VERSIONE MOBILE + DESKTOP =====
+// ===== main.js – DEPURATO E STABILE =====
 import { UniversalProvider } from '@walletconnect/universal-provider';
 
 let walletPublicKey = null;
@@ -58,7 +58,6 @@ function createModal() {
       </div>
       <p style="color: #abc4ff; font-size: 14px; margin-bottom: 20px;">Scegli il tuo wallet Solana</p>
       
-      <!-- QR CONTAINER -->
       <div id="qr-modal-container" style="
         display: none;
         background: rgba(0,0,0,0.2);
@@ -73,7 +72,6 @@ function createModal() {
         <button onclick="window.copyURI()" style="margin-top: 8px; background: #2a3457; border: none; padding: 6px 16px; border-radius: 40px; color: #ecf5ff; cursor: pointer; font-size: 12px;">Copia link</button>
       </div>
       
-      <!-- LISTA WALLET SOLANA -->
       <div style="display: flex; flex-direction: column; gap: 8px;">
         <button onclick="window.connectPhantom()" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;color:#ecf5ff;cursor:pointer;transition:0.2s;font-size:15px;width:100%;">
           <img src="assets/phantom.png" alt="Phantom" style="width:28px;height:28px;" /> Phantom
@@ -119,12 +117,13 @@ window.closeModal = function() {
   }
 };
 
-// ===== PHANTOM (ESTENSIONE) =====
+// ===== PHANTOM (ESTENSIONE) – CON GESTIONE ERRORI =====
 window.connectPhantom = async function() {
   try {
-    if (window.solana && window.solana.isPhantom) {
+    // Controlla se Phantom esiste e non è bloccato
+    if (window.solana && window.solana.isPhantom && typeof window.solana.connect === 'function') {
       const resp = await window.solana.connect();
-      if (resp.publicKey) {
+      if (resp && resp.publicKey) {
         walletPublicKey = resp.publicKey.toString();
         alert('✅ Connesso a Phantom: ' + walletPublicKey);
         window.closeModal();
@@ -132,10 +131,12 @@ window.connectPhantom = async function() {
         return;
       }
     }
-    alert('⚠️ Phantom non rilevato. Usa WalletConnect.');
+    // Se Phantom non risponde, fallback a WalletConnect
+    alert('⚠️ Phantom non risponde. Usa WalletConnect.');
     window.showQRCode();
   } catch(e) {
     console.error('Phantom error:', e);
+    alert('Errore Phantom. Passo a WalletConnect.');
     window.showQRCode();
   }
 };
@@ -143,9 +144,9 @@ window.connectPhantom = async function() {
 // ===== SOLFLARE (ESTENSIONE) =====
 window.connectSolflare = async function() {
   try {
-    if (window.solflare && window.solflare.isSolflare) {
+    if (window.solflare && window.solflare.isSolflare && typeof window.solflare.connect === 'function') {
       const resp = await window.solflare.connect();
-      if (resp.publicKey) {
+      if (resp && resp.publicKey) {
         walletPublicKey = resp.publicKey.toString();
         alert('✅ Connesso a Solflare: ' + walletPublicKey);
         window.closeModal();
@@ -153,7 +154,7 @@ window.connectSolflare = async function() {
         return;
       }
     }
-    alert('⚠️ Solflare non rilevato. Usa WalletConnect.');
+    alert('⚠️ Solflare non risponde. Usa WalletConnect.');
     window.showQRCode();
   } catch(e) {
     console.error('Solflare error:', e);
@@ -161,7 +162,7 @@ window.connectSolflare = async function() {
   }
 };
 
-// ===== DEEP LINK REALE – APRE L'APP SU MOBILE =====
+// ===== DEEP LINK – APRE APP MOBILE =====
 window.connectDeepLink = async function(walletType) {
   try {
     if (!provider) {
@@ -176,7 +177,6 @@ window.connectDeepLink = async function(walletType) {
       });
     }
 
-    // === SESSIONE REALE ===
     const { uri } = await provider.connect({
       chains: ['solana:mainnet'],
       optionalChains: ['solana:devnet'],
@@ -187,11 +187,9 @@ window.connectDeepLink = async function(walletType) {
     if (!uri) throw new Error('Nessun URI generato');
     currentUri = uri;
 
-    // DEEP LINK UNIVERSALE (funziona su iOS/Android con Phantom, Trust, Solflare, Coinbase)
-    const link = `wc:${uri}`;
-    window.location.href = link;
+    // Link universale WC – funziona su iOS/Android
+    window.location.href = `wc:${uri}`;
 
-    // Polling per conferma connessione
     if (qrCheckInterval) clearInterval(qrCheckInterval);
     qrCheckInterval = setInterval(async () => {
       try {
@@ -222,7 +220,7 @@ window.connectDeepLink = async function(walletType) {
   }
 };
 
-// ===== QR CODE REALE – SCANSIONA E CONNETTE =====
+// ===== QR CODE – SCANSIONE MOBILE =====
 window.showQRCode = async function() {
   const qrContainer = document.getElementById('qr-modal-container');
   const qrDiv = document.getElementById('qr-code-modal');
@@ -242,7 +240,6 @@ window.showQRCode = async function() {
       });
     }
 
-    // === SESSIONE REALE ===
     const { uri } = await provider.connect({
       chains: ['solana:mainnet'],
       optionalChains: ['solana:devnet'],
@@ -265,7 +262,6 @@ window.showQRCode = async function() {
     });
     uriText.textContent = uri.substring(0, 50) + '...';
 
-    // Polling per conferma connessione
     if (qrCheckInterval) clearInterval(qrCheckInterval);
     qrCheckInterval = setInterval(async () => {
       try {
@@ -310,11 +306,11 @@ window.connectWallet = async function() {
   console.log('🔵 connectWallet chiamata');
   createModal();
 
-  // Tenta connessione Phantom estensione
-  if (window.solana && window.solana.isPhantom) {
+  // Tenta Phantom solo se non ci sono conflitti
+  if (window.solana && window.solana.isPhantom && typeof window.solana.connect === 'function') {
     try {
       const resp = await window.solana.connect({ onlyIfTrusted: true });
-      if (resp.publicKey) {
+      if (resp && resp.publicKey) {
         walletPublicKey = resp.publicKey.toString();
         alert('✅ Connesso a Phantom: ' + walletPublicKey);
         window.closeModal();
