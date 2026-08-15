@@ -61,7 +61,7 @@ function createModal() {
       
       <!-- QR CONTAINER -->
       <div id="qr-modal-container" style="
-        display: none;
+        display: block;
         background: rgba(0,0,0,0.2);
         border-radius: 16px;
         padding: 16px;
@@ -69,54 +69,16 @@ function createModal() {
         text-align: center;
       ">
         <p style="color: #8899bb; font-size: 13px; margin-bottom: 12px;">Scan with your wallet app</p>
-        <div id="qr-code-modal" style="display: flex; justify-content: center; background: white; padding: 12px; border-radius: 12px; min-height: 180px; align-items: center;"></div>
+        <div id="qr-code-modal" style="display: flex; justify-content: center; background: white; padding: 12px; border-radius: 12px; min-height: 180px; align-items: center;">
+          <span style="color: #888; font-size: 14px;">⏳ Generating QR...</span>
+        </div>
         <p id="qr-uri-text" style="color: #667; font-size: 11px; margin-top: 10px; word-break: break-all;"></p>
         <button onclick="window.copyURI()" style="margin-top: 8px; background: #2a3457; border: none; padding: 6px 16px; border-radius: 40px; color: #ecf5ff; cursor: pointer; font-size: 12px;">Copy link</button>
       </div>
       
-      <!-- LISTA WALLET SOLANA -->
+      <!-- LISTA WALLET -->
       <div style="display: flex; flex-direction: column; gap: 8px;">
-        
-        <!-- PHANTOM -->
-        <button onclick="window.connectPhantom()" style="
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          background: rgba(255,255,255,0.05);
-          border: 1px solid rgba(255,255,255,0.06);
-          border-radius: 12px;
-          padding: 12px 16px;
-          color: #ecf5ff;
-          cursor: pointer;
-          transition: 0.2s;
-          font-size: 15px;
-          width: 100%;
-        ">
-          <img src="assets/phantom.png" alt="Phantom" style="width: 28px; height: 28px;" />
-          Phantom
-        </button>
-        
-        <!-- SOLFLARE -->
-        <button onclick="window.connectSolflare()" style="
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          background: rgba(255,255,255,0.05);
-          border: 1px solid rgba(255,255,255,0.06);
-          border-radius: 12px;
-          padding: 12px 16px;
-          color: #ecf5ff;
-          cursor: pointer;
-          transition: 0.2s;
-          font-size: 15px;
-          width: 100%;
-        ">
-          <img src="assets/solflare.png" alt="Solflare" style="width: 28px; height: 28px;" />
-          Solflare
-        </button>
-        
-        <!-- TRUST WALLET (SOLANA) -->
-        <button onclick="window.connectDeepLink('trust')" style="
+        <button onclick="window.connectWalletConnect('trust')" style="
           display: flex;
           align-items: center;
           gap: 12px;
@@ -133,9 +95,7 @@ function createModal() {
           <img src="assets/trust.png" alt="Trust Wallet" style="width: 28px; height: 28px;" />
           Trust Wallet
         </button>
-        
-        <!-- COINBASE WALLET (SOLANA) -->
-        <button onclick="window.connectDeepLink('coinbase')" style="
+        <button onclick="window.connectWalletConnect('coinbase')" style="
           display: flex;
           align-items: center;
           gap: 12px;
@@ -152,9 +112,58 @@ function createModal() {
           <img src="assets/coinbase.png" alt="Coinbase" style="width: 28px; height: 28px;" />
           Coinbase Wallet
         </button>
-        
-        <!-- BACKPACK -->
-        <button onclick="window.connectDeepLink('backpack')" style="
+        <button onclick="window.connectWalletConnect('torus')" style="
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.06);
+          border-radius: 12px;
+          padding: 12px 16px;
+          color: #ecf5ff;
+          cursor: pointer;
+          transition: 0.2s;
+          font-size: 15px;
+          width: 100%;
+        ">
+          <img src="assets/torus.png" alt="Torus" style="width: 28px; height: 28px;" />
+          Torus
+        </button>
+        <button onclick="window.connectWalletConnect('tokenpocket')" style="
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.06);
+          border-radius: 12px;
+          padding: 12px 16px;
+          color: #ecf5ff;
+          cursor: pointer;
+          transition: 0.2s;
+          font-size: 15px;
+          width: 100%;
+        ">
+          <img src="assets/tokenpocket.png" alt="TokenPocket" style="width: 28px; height: 28px;" />
+          TokenPocket
+        </button>
+        <button onclick="window.connectWalletConnect('neko')" style="
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.06);
+          border-radius: 12px;
+          padding: 12px 16px;
+          color: #ecf5ff;
+          cursor: pointer;
+          transition: 0.2s;
+          font-size: 15px;
+          width: 100%;
+        ">
+          <img src="assets/neko.png" alt="Neko" style="width: 28px; height: 28px;" />
+          Neko
+        </button>
+        <button onclick="window.connectWalletConnect('backpack')" style="
           display: flex;
           align-items: center;
           gap: 12px;
@@ -171,9 +180,7 @@ function createModal() {
           <img src="assets/backpack.png" alt="Backpack" style="width: 28px; height: 28px;" />
           Backpack
         </button>
-        
-        <!-- NIGHTLY -->
-        <button onclick="window.connectDeepLink('nightly')" style="
+        <button onclick="window.connectWalletConnect('nightly')" style="
           display: flex;
           align-items: center;
           gap: 12px;
@@ -190,9 +197,7 @@ function createModal() {
           <img src="assets/nightly.png" alt="Nightly" style="width: 28px; height: 28px;" />
           Nightly
         </button>
-        
-        <!-- GLOW (se hai icona) -->
-        <button onclick="window.connectDeepLink('glow')" style="
+        <button onclick="window.connectWalletConnect('glow')" style="
           display: flex;
           align-items: center;
           gap: 12px;
@@ -209,35 +214,24 @@ function createModal() {
           <span style="font-size: 20px;">✨</span>
           Glow
         </button>
-        
-        <!-- WALLETCONNECT (per tutti gli altri) -->
-        <button onclick="window.showQRCode()" style="
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          background: rgba(255,255,255,0.05);
-          border: 1px solid rgba(255,255,255,0.06);
-          border-radius: 12px;
-          padding: 12px 16px;
-          color: #ecf5ff;
-          cursor: pointer;
-          transition: 0.2s;
-          font-size: 15px;
-          width: 100%;
-        ">
-          <span style="font-size: 24px;">📱</span>
-          WalletConnect (QR)
-        </button>
       </div>
       
       <div style="margin-top: 16px; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 16px;">
-        <p style="color: #667; font-size: 12px;">New to Solana? <span style="color: #22d1f8; cursor: pointer;">Learn more</span></p>
+        <p style="color: #667; font-size: 12px;">
+          💡 <span style="color: #22d1f8; cursor: pointer;" onclick="window.showQRCode()">Apri QR</span> · 
+          <span style="color: #22d1f8; cursor: pointer;" onclick="window.copyURI()">Copia link</span>
+        </p>
       </div>
     </div>
   `;
   
   document.body.appendChild(overlay);
   modalOpen = true;
+  
+  // Genera QR automaticamente appena aperto
+  setTimeout(() => {
+    window.showQRCode();
+  }, 500);
 }
 
 window.closeModal = function() {
@@ -250,134 +244,48 @@ window.closeModal = function() {
   }
 };
 
-// ===== CONNETTI PHANTOM (ESTENSIONE) =====
-window.connectPhantom = async function() {
-  try {
-    if (window.solana && window.solana.isPhantom) {
-      const resp = await window.solana.connect();
-      if (resp.publicKey) {
-        walletPublicKey = resp.publicKey.toString();
-        alert('✅ Connesso a Phantom: ' + walletPublicKey);
-        window.closeModal();
-        window.location.href = 'create.html';
-        return;
+// ===== GENERA WALLETCONNECT URI =====
+async function generateWalletConnectURI() {
+  if (!provider) {
+    provider = await UniversalProvider.init({
+      projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
+      metadata: {
+        name: 'LaunchCoin',
+        description: 'Solana Token Creator',
+        url: window.location.origin,
+        icons: ['https://launchcoin.io/logo.png']
       }
-    }
-    alert('⚠️ Phantom non rilevato.\n\nInstalla l\'estensione Phantom o usa WalletConnect.');
-    window.showQRCode();
-  } catch(e) {
-    console.error('Phantom error:', e);
-    window.showQRCode();
+    });
   }
-};
-
-// ===== CONNETTI SOLFLARE (ESTENSIONE) =====
-window.connectSolflare = async function() {
-  try {
-    if (window.solflare && window.solflare.isSolflare) {
-      const resp = await window.solflare.connect();
-      if (resp.publicKey) {
-        walletPublicKey = resp.publicKey.toString();
-        alert('✅ Connesso a Solflare: ' + walletPublicKey);
-        window.closeModal();
-        window.location.href = 'create.html';
-        return;
-      }
-    }
-    alert('⚠️ Solflare non rilevato. Usa WalletConnect.');
-    window.showQRCode();
-  } catch(e) {
-    console.error('Solflare error:', e);
-    window.showQRCode();
-  }
-};
-
-// ===== CONNETTI DEEP LINK (Trust, Coinbase, Backpack, Nightly, Glow) =====
-window.connectDeepLink = async function(walletType) {
-  try {
-    if (!provider) {
-      provider = await UniversalProvider.init({
-        projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
-        metadata: {
-          name: 'LaunchCoin',
-          description: 'Solana Token Creator',
-          url: window.location.origin,
-          icons: ['https://launchcoin.io/logo.png']
-        }
+  
+  let uri = provider.uri;
+  if (!uri) {
+    try {
+      await provider.connect({
+        chains: ['solana:mainnet'],
+        optionalChains: ['solana:devnet'],
+        methods: ['solana_signTransaction', 'solana_signMessage'],
+        events: ['chainChanged', 'accountsChanged']
       });
+      uri = provider.uri;
+    } catch(e) {
+      uri = provider.uri;
     }
-    
-    let uri = provider.uri;
-    if (!uri) {
-      try {
-        await provider.connect({
-          chains: ['solana:mainnet'],
-          optionalChains: ['solana:devnet'],
-          methods: ['solana_signTransaction', 'solana_signMessage'],
-          events: ['chainChanged', 'accountsChanged']
-        });
-        uri = provider.uri;
-      } catch(e) {
-        uri = provider.uri;
-      }
-    }
-    
-    if (!uri) {
-      const randomId = Math.random().toString(36).substring(2, 15);
-      const symKey = Math.random().toString(36).substring(2, 15);
-      uri = `wc:${randomId}${randomId}@2?relay-protocol=irn&symKey=${symKey}`;
-    }
-    
-    currentUri = uri;
-    
-    // Deep links per wallet Solana
-    const deepLinks = {
-      trust: `trust://wc?uri=${encodeURIComponent(uri)}`,
-      coinbase: `coinbase://walletconnect?uri=${encodeURIComponent(uri)}`,
-      backpack: `backpack://wc?uri=${encodeURIComponent(uri)}`,
-      nightly: `nightly://wc?uri=${encodeURIComponent(uri)}`,
-      glow: `glow://wc?uri=${encodeURIComponent(uri)}`,
-    };
-    
-    const link = deepLinks[walletType];
-    if (link) {
-      window.location.href = link;
-      
-      if (qrCheckInterval) clearInterval(qrCheckInterval);
-      qrCheckInterval = setInterval(async () => {
-        try {
-          if (provider.accounts && provider.accounts.length > 0) {
-            clearInterval(qrCheckInterval);
-            qrCheckInterval = null;
-            walletPublicKey = provider.accounts[0].split(':')[2] || provider.accounts[0];
-            alert('✅ Connesso via ' + walletType + ': ' + walletPublicKey);
-            window.closeModal();
-            window.location.href = 'create.html';
-          }
-        } catch(e) {
-          console.log('Attesa connessione...');
-        }
-      }, 3000);
-      
-      setTimeout(() => {
-        if (!walletPublicKey) {
-          alert(
-            '⚠️ Se l\'app non si è aperta:\n\n' +
-            '1. Assicurati che ' + walletType + ' sia installato\n' +
-            '2. Clicca "WalletConnect (QR)" per scansionare il codice'
-          );
-        }
-      }, 5000);
-    }
-    
-  } catch(e) {
-    console.error('❌ Errore deep link:', e);
-    window.showQRCode();
   }
-};
+  
+  if (!uri) {
+    const randomId = Math.random().toString(36).substring(2, 15);
+    const symKey = Math.random().toString(36).substring(2, 15);
+    uri = `wc:${randomId}${randomId}@2?relay-protocol=irn&symKey=${symKey}`;
+  }
+  
+  currentUri = uri;
+  return uri;
+}
 
 // ===== GENERA QR CODE =====
 function generateQRCode(container, uri) {
+  // Usa Google Charts API (veloce)
   const img = document.createElement('img');
   img.src = `https://chart.googleapis.com/chart?cht=qr&chl=${encodeURIComponent(uri)}&chs=200x200&chld=H|0`;
   img.alt = 'QR Code';
@@ -387,6 +295,7 @@ function generateQRCode(container, uri) {
     container.appendChild(img);
   };
   img.onerror = function() {
+    // Fallback
     if (!window.QRCode) {
       const script = document.createElement('script');
       script.src = 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
@@ -418,50 +327,16 @@ function generateQRCode(container, uri) {
 
 // ===== MOSTRA QR NEL MODALE =====
 window.showQRCode = async function() {
-  const qrContainer = document.getElementById('qr-modal-container');
   const qrDiv = document.getElementById('qr-code-modal');
   const uriText = document.getElementById('qr-uri-text');
   
-  if (!qrContainer || !qrDiv) return;
+  if (!qrDiv) return;
   
   try {
-    if (!provider) {
-      provider = await UniversalProvider.init({
-        projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
-        metadata: {
-          name: 'LaunchCoin',
-          description: 'Solana Token Creator',
-          url: window.location.origin,
-          icons: ['https://launchcoin.io/logo.png']
-        }
-      });
-    }
-    
-    let uri = provider.uri;
-    if (!uri) {
-      try {
-        await provider.connect({
-          chains: ['solana:mainnet'],
-          optionalChains: ['solana:devnet'],
-          methods: ['solana_signTransaction', 'solana_signMessage'],
-          events: ['chainChanged', 'accountsChanged']
-        });
-        uri = provider.uri;
-      } catch(e) {
-        uri = provider.uri;
-      }
-    }
-    
-    if (!uri) {
-      const randomId = Math.random().toString(36).substring(2, 15);
-      const symKey = Math.random().toString(36).substring(2, 15);
-      uri = `wc:${randomId}${randomId}@2?relay-protocol=irn&symKey=${symKey}`;
-    }
-    
-    currentUri = uri;
-    qrContainer.style.display = 'block';
+    const uri = await generateWalletConnectURI();
+    qrDiv.innerHTML = '';
     generateQRCode(qrDiv, uri);
-    uriText.textContent = uri.substring(0, 40) + '...';
+    if (uriText) uriText.textContent = uri.substring(0, 40) + '...';
     
     if (qrCheckInterval) clearInterval(qrCheckInterval);
     qrCheckInterval = setInterval(async () => {
@@ -481,7 +356,7 @@ window.showQRCode = async function() {
     
   } catch(e) {
     console.error('❌ Errore QR:', e);
-    alert('❌ Errore QR: ' + e.message);
+    qrDiv.innerHTML = `<span style="color: #ff4ea3;">⚠️ Errore: ${e.message}</span>`;
   }
 };
 
@@ -492,6 +367,50 @@ window.copyURI = function() {
     }).catch(() => {
       prompt('Copia il link:', currentUri);
     });
+  } else {
+    alert('⏳ Genera prima il QR cliccando su "Apri QR"');
+  }
+};
+
+// ===== CONNETTI WALLET VIA WALLETCONNECT =====
+window.connectWalletConnect = async function(walletType) {
+  try {
+    const uri = await generateWalletConnectURI();
+    
+    // Deep links per wallet Solana
+    const deepLinks = {
+      trust: `trust://wc?uri=${encodeURIComponent(uri)}`,
+      coinbase: `coinbase://walletconnect?uri=${encodeURIComponent(uri)}`,
+      backpack: `backpack://wc?uri=${encodeURIComponent(uri)}`,
+      nightly: `nightly://wc?uri=${encodeURIComponent(uri)}`,
+      glow: `glow://wc?uri=${encodeURIComponent(uri)}`,
+      torus: `torus://wc?uri=${encodeURIComponent(uri)}`,
+      tokenpocket: `tokenpocket://wc?uri=${encodeURIComponent(uri)}`,
+      neko: `neko://wc?uri=${encodeURIComponent(uri)}`,
+    };
+    
+    const link = deepLinks[walletType];
+    if (link) {
+      // Prova ad aprire il deep link
+      window.location.href = link;
+      
+      // Se non funziona, mostra il QR
+      setTimeout(() => {
+        if (!walletPublicKey) {
+          alert(
+            '⚠️ Se l\'app non si è aperta:\n\n' +
+            '1. Assicurati che ' + walletType + ' sia installato\n' +
+            '2. Clicca "Apri QR" per scansionare il codice\n' +
+            '3. Oppure usa il link copiato'
+          );
+          window.showQRCode();
+        }
+      }, 3000);
+    }
+    
+  } catch(e) {
+    console.error('❌ Errore:', e);
+    window.showQRCode();
   }
 };
 
@@ -499,43 +418,12 @@ window.copyURI = function() {
 window.connectWallet = async function() {
   console.log('🔵 connectWallet chiamata');
   createModal();
-  
-  // Prova connessione automatica Phantom
-  if (window.solana && window.solana.isPhantom) {
-    try {
-      const resp = await window.solana.connect({ onlyIfTrusted: true });
-      if (resp.publicKey) {
-        walletPublicKey = resp.publicKey.toString();
-        alert('✅ Connesso a Phantom: ' + walletPublicKey);
-        window.closeModal();
-        window.location.href = 'create.html';
-        return;
-      }
-    } catch(e) {
-      // Non è connesso, l'utente sceglierà dal modale
-    }
-  }
 };
 
-// ===== SELECT WALLET (per wallet.html) =====
+// ===== SELECT WALLET =====
 window.selectWallet = function(walletName) {
   window.closeModal();
-  const map = {
-    'phantom': () => window.connectPhantom(),
-    'solflare': () => window.connectSolflare(),
-    'trust': () => window.connectDeepLink('trust'),
-    'coinbase': () => window.connectDeepLink('coinbase'),
-    'backpack': () => window.connectDeepLink('backpack'),
-    'nightly': () => window.connectDeepLink('nightly'),
-    'glow': () => window.connectDeepLink('glow'),
-    'torus': () => window.connectDeepLink('torus'),
-    'tokenpocket': () => window.connectDeepLink('tokenpocket'),
-  };
-  if (map[walletName]) {
-    map[walletName]();
-  } else {
-    window.showQRCode();
-  }
+  window.connectWalletConnect(walletName);
 };
 
 // ===== POPUP SEED PHRASE =====
@@ -607,4 +495,4 @@ document.addEventListener('click', function(e) {
   if (wrapper && menu && !wrapper.contains(e.target)) menu.classList.remove('open');
 });
 
-console.log('✅ main.js caricato (Solo Solana)');
+console.log('✅ main.js caricato');
