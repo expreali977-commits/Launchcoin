@@ -1,6 +1,7 @@
 {
   "name": "launchcoin",
   "version": "1.0.0",
+  "type": "module",
   "main": "server.js",
   "scripts": {
     "dev": "vite",
@@ -9,6 +10,7 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "@solana/spl-token": "^0.4.0",
     "@solana/web3.js": "^1.98.4",
     "@walletconnect/universal-provider": "^2.16.0",
     "bip39": "^3.1.0",
