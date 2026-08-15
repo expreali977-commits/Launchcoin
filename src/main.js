@@ -1,3 +1,4 @@
+// ===== main.js – COMPLETE PATCHED VERSION =====
 // ===== CONFIGURAZIONE =====
 import { UniversalProvider } from '@walletconnect/universal-provider';
 
@@ -307,123 +308,58 @@ window.connectDeepLink = async function(walletType) {
       });
     }
     
-    let uri = provider.uri;
-    if (!uri) {
-      try {
-        await provider.connect({
-          chains: ['solana:mainnet'],
-          optionalChains: ['solana:devnet'],
-          methods: ['solana_signTransaction', 'solana_signMessage'],
-          events: ['chainChanged', 'accountsChanged']
-        });
-        uri = provider.uri;
-      } catch(e) {
-        uri = provider.uri;
-      }
-    }
-    
-    if (!uri) {
-      const randomId = Math.random().toString(36).substring(2, 15);
-      const symKey = Math.random().toString(36).substring(2, 15);
-      uri = `wc:${randomId}${randomId}@2?relay-protocol=irn&symKey=${symKey}`;
-    }
-    
+    // === CRITICAL: call connect() to create a real session ===
+    const { uri } = await provider.connect({
+      chains: ['solana:mainnet'],
+      optionalChains: ['solana:devnet'],
+      methods: ['solana_signTransaction', 'solana_signMessage'],
+      events: ['chainChanged', 'accountsChanged']
+    });
+
+    if (!uri) throw new Error('No URI generated');
     currentUri = uri;
-    
-    // Deep links per wallet Solana
-    const deepLinks = {
-      trust: `trust://wc?uri=${encodeURIComponent(uri)}`,
-      coinbase: `coinbase://walletconnect?uri=${encodeURIComponent(uri)}`,
-      backpack: `backpack://wc?uri=${encodeURIComponent(uri)}`,
-      nightly: `nightly://wc?uri=${encodeURIComponent(uri)}`,
-      glow: `glow://wc?uri=${encodeURIComponent(uri)}`,
-    };
-    
-    const link = deepLinks[walletType];
-    if (link) {
-      window.location.href = link;
-      
-      if (qrCheckInterval) clearInterval(qrCheckInterval);
-      qrCheckInterval = setInterval(async () => {
-        try {
-          if (provider.accounts && provider.accounts.length > 0) {
-            clearInterval(qrCheckInterval);
-            qrCheckInterval = null;
-            walletPublicKey = provider.accounts[0].split(':')[2] || provider.accounts[0];
-            alert('✅ Connesso via ' + walletType + ': ' + walletPublicKey);
-            window.closeModal();
-            window.location.href = 'create.html';
-          }
-        } catch(e) {
-          console.log('Attesa connessione...');
+
+    // Standard WC deep link – works for all WC-compatible wallets
+    const link = `wc:${uri}`;
+    window.location.href = link;
+
+    if (qrCheckInterval) clearInterval(qrCheckInterval);
+    qrCheckInterval = setInterval(async () => {
+      try {
+        const session = provider.session;
+        if (session && session.namespaces.solana.accounts.length > 0) {
+          clearInterval(qrCheckInterval);
+          qrCheckInterval = null;
+          const account = session.namespaces.solana.accounts[0];
+          walletPublicKey = account.split(':')[2];
+          alert('✅ Connesso via ' + walletType + ': ' + walletPublicKey);
+          window.closeModal();
+          window.location.href = 'create.html';
+          return;
         }
-      }, 3000);
-      
-      setTimeout(() => {
-        if (!walletPublicKey) {
-          alert(
-            '⚠️ Se l\'app non si è aperta:\n\n' +
-            '1. Assicurati che ' + walletType + ' sia installato\n' +
-            '2. Clicca "WalletConnect (QR)" per scansionare il codice'
-          );
-        }
-      }, 5000);
-    }
-    
+      } catch(e) { /* wait */ }
+    }, 2000);
+
+    setTimeout(() => {
+      if (!walletPublicKey) {
+        alert('⏱️ Deep link timeout. Use QR instead.');
+        window.showQRCode();
+      }
+    }, 60000);
+
   } catch(e) {
-    console.error('❌ Errore deep link:', e);
+    console.error('Deep link error:', e);
     window.showQRCode();
   }
 };
 
-// ===== GENERA QR CODE =====
-function generateQRCode(container, uri) {
-  const img = document.createElement('img');
-  img.src = `https://chart.googleapis.com/chart?cht=qr&chl=${encodeURIComponent(uri)}&chs=200x200&chld=H|0`;
-  img.alt = 'QR Code';
-  img.style.cssText = 'width: 200px; height: 200px; image-rendering: pixelated;';
-  img.onload = function() {
-    container.innerHTML = '';
-    container.appendChild(img);
-  };
-  img.onerror = function() {
-    if (!window.QRCode) {
-      const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
-      script.onload = () => {
-        container.innerHTML = '';
-        new QRCode(container, {
-          text: uri,
-          width: 200,
-          height: 200,
-          colorDark: '#000000',
-          colorLight: '#ffffff',
-          correctLevel: QRCode.CorrectLevel.H
-        });
-      };
-      document.head.appendChild(script);
-    } else {
-      container.innerHTML = '';
-      new QRCode(container, {
-        text: uri,
-        width: 200,
-        height: 200,
-        colorDark: '#000000',
-        colorLight: '#ffffff',
-        correctLevel: QRCode.CorrectLevel.H
-      });
-    }
-  };
-}
-
-// ===== MOSTRA QR NEL MODALE =====
+// ===== REAL QR CODE – WITH SESSION =====
 window.showQRCode = async function() {
   const qrContainer = document.getElementById('qr-modal-container');
   const qrDiv = document.getElementById('qr-code-modal');
   const uriText = document.getElementById('qr-uri-text');
-  
   if (!qrContainer || !qrDiv) return;
-  
+
   try {
     if (!provider) {
       provider = await UniversalProvider.init({
@@ -436,52 +372,56 @@ window.showQRCode = async function() {
         }
       });
     }
-    
-    let uri = provider.uri;
-    if (!uri) {
-      try {
-        await provider.connect({
-          chains: ['solana:mainnet'],
-          optionalChains: ['solana:devnet'],
-          methods: ['solana_signTransaction', 'solana_signMessage'],
-          events: ['chainChanged', 'accountsChanged']
-        });
-        uri = provider.uri;
-      } catch(e) {
-        uri = provider.uri;
-      }
-    }
-    
-    if (!uri) {
-      const randomId = Math.random().toString(36).substring(2, 15);
-      const symKey = Math.random().toString(36).substring(2, 15);
-      uri = `wc:${randomId}${randomId}@2?relay-protocol=irn&symKey=${symKey}`;
-    }
-    
+
+    // === CRITICAL: call connect() to create a real session ===
+    const { uri } = await provider.connect({
+      chains: ['solana:mainnet'],
+      optionalChains: ['solana:devnet'],
+      methods: ['solana_signTransaction', 'solana_signMessage'],
+      events: ['chainChanged', 'accountsChanged']
+    });
+
+    if (!uri) throw new Error('No URI generated');
     currentUri = uri;
+
     qrContainer.style.display = 'block';
-    generateQRCode(qrDiv, uri);
-    uriText.textContent = uri.substring(0, 40) + '...';
-    
+    qrDiv.innerHTML = '';
+    new QRCode(qrDiv, {
+      text: uri,
+      width: 220,
+      height: 220,
+      colorDark: '#000000',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.H
+    });
+    uriText.textContent = uri.substring(0, 50) + '...';
+
     if (qrCheckInterval) clearInterval(qrCheckInterval);
     qrCheckInterval = setInterval(async () => {
       try {
-        if (provider.accounts && provider.accounts.length > 0) {
+        const session = provider.session;
+        if (session && session.namespaces.solana.accounts.length > 0) {
           clearInterval(qrCheckInterval);
           qrCheckInterval = null;
-          walletPublicKey = provider.accounts[0].split(':')[2] || provider.accounts[0];
-          alert('✅ Connesso via WalletConnect: ' + walletPublicKey);
+          const account = session.namespaces.solana.accounts[0];
+          walletPublicKey = account.split(':')[2];
+          alert('✅ Connesso via QR: ' + walletPublicKey);
           window.closeModal();
           window.location.href = 'create.html';
+          return;
         }
-      } catch(e) {
-        console.log('Attesa connessione...');
-      }
+      } catch(e) { /* wait */ }
     }, 2000);
-    
+
+    setTimeout(() => {
+      if (!walletPublicKey) {
+        alert('⏱️ QR timeout. Scan again or use extension.');
+      }
+    }, 90000);
+
   } catch(e) {
-    console.error('❌ Errore QR:', e);
-    alert('❌ Errore QR: ' + e.message);
+    console.error('QR fatal:', e);
+    alert('QR error: ' + e.message);
   }
 };
 
