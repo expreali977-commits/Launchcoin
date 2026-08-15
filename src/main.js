@@ -1,11 +1,10 @@
-// ===== main.js – CORRETTO CON SESSIONE REALE =====
+// ===== main.js – VERSIONE MOBILE + DESKTOP =====
 import { UniversalProvider } from '@walletconnect/universal-provider';
 
 let walletPublicKey = null;
 let currentStep = 0;
 const steps = document.querySelectorAll('.step');
 let provider = null;
-let isConnecting = false;
 let qrCheckInterval = null;
 let currentUri = null;
 
@@ -59,6 +58,7 @@ function createModal() {
       </div>
       <p style="color: #abc4ff; font-size: 14px; margin-bottom: 20px;">Scegli il tuo wallet Solana</p>
       
+      <!-- QR CONTAINER -->
       <div id="qr-modal-container" style="
         display: none;
         background: rgba(0,0,0,0.2);
@@ -73,6 +73,7 @@ function createModal() {
         <button onclick="window.copyURI()" style="margin-top: 8px; background: #2a3457; border: none; padding: 6px 16px; border-radius: 40px; color: #ecf5ff; cursor: pointer; font-size: 12px;">Copia link</button>
       </div>
       
+      <!-- LISTA WALLET SOLANA -->
       <div style="display: flex; flex-direction: column; gap: 8px;">
         <button onclick="window.connectPhantom()" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;color:#ecf5ff;cursor:pointer;transition:0.2s;font-size:15px;width:100%;">
           <img src="assets/phantom.png" alt="Phantom" style="width:28px;height:28px;" /> Phantom
@@ -160,7 +161,7 @@ window.connectSolflare = async function() {
   }
 };
 
-// ===== DEEP LINK REALE (WC STANDARD) =====
+// ===== DEEP LINK REALE – APRE L'APP SU MOBILE =====
 window.connectDeepLink = async function(walletType) {
   try {
     if (!provider) {
@@ -175,7 +176,7 @@ window.connectDeepLink = async function(walletType) {
       });
     }
 
-    // === CREA SESSIONE REALE ===
+    // === SESSIONE REALE ===
     const { uri } = await provider.connect({
       chains: ['solana:mainnet'],
       optionalChains: ['solana:devnet'],
@@ -186,10 +187,11 @@ window.connectDeepLink = async function(walletType) {
     if (!uri) throw new Error('Nessun URI generato');
     currentUri = uri;
 
-    // Deep link standard WC – apre qualsiasi wallet compatibile
+    // DEEP LINK UNIVERSALE (funziona su iOS/Android con Phantom, Trust, Solflare, Coinbase)
     const link = `wc:${uri}`;
     window.location.href = link;
 
+    // Polling per conferma connessione
     if (qrCheckInterval) clearInterval(qrCheckInterval);
     qrCheckInterval = setInterval(async () => {
       try {
@@ -220,7 +222,7 @@ window.connectDeepLink = async function(walletType) {
   }
 };
 
-// ===== QR CODE REALE (CON SESSIONE) =====
+// ===== QR CODE REALE – SCANSIONA E CONNETTE =====
 window.showQRCode = async function() {
   const qrContainer = document.getElementById('qr-modal-container');
   const qrDiv = document.getElementById('qr-code-modal');
@@ -240,7 +242,7 @@ window.showQRCode = async function() {
       });
     }
 
-    // === CREA SESSIONE REALE ===
+    // === SESSIONE REALE ===
     const { uri } = await provider.connect({
       chains: ['solana:mainnet'],
       optionalChains: ['solana:devnet'],
@@ -263,6 +265,7 @@ window.showQRCode = async function() {
     });
     uriText.textContent = uri.substring(0, 50) + '...';
 
+    // Polling per conferma connessione
     if (qrCheckInterval) clearInterval(qrCheckInterval);
     qrCheckInterval = setInterval(async () => {
       try {
@@ -307,6 +310,7 @@ window.connectWallet = async function() {
   console.log('🔵 connectWallet chiamata');
   createModal();
 
+  // Tenta connessione Phantom estensione
   if (window.solana && window.solana.isPhantom) {
     try {
       const resp = await window.solana.connect({ onlyIfTrusted: true });
