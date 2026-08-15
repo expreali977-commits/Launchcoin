@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5" />
   <title>How to use & FAQ – LaunchCoin</title>
   <link rel="stylesheet" href="style.css" />
+  
+  <!-- QRCode libreria – OBBLIGATORIA -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 </head>
 <body>
   <header class="glass">
@@ -42,7 +45,7 @@
     <div class="faq-item"><h3>How can I manage token authorities on Solana?</h3><p>On Solana, tokens have three types of authority: Mint, Freeze, and Mutability. It's essential to know how and when to revoke these authorities to ensure investor confidence. Tools are available to manage these authorities without coding.</p></div>
   </div>
 
-  <script src="https://unpkg.com/@solana/web3.js@1.87.6/lib/index.iife.min.js"></script>
+  <!-- SOLO QUESTO SCRIPT MODULO -->
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>
