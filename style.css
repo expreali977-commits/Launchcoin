@@ -285,6 +285,11 @@ footer {
   padding: 36px 28px;
   text-align: center;
 }
+/* Aggiungi se vuoi un'icona per Glow */
+.wallet-modal button img[alt="Glow"] {
+  /* Usa un placeholder se non hai l'icona */
+  content: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28"%3E%3Crect width="28" height="28" rx="6" fill="%23FF6B35"/%3E%3Ctext x="4" y="20" font-size="16" fill="white" font-weight="bold"%3EG%3C/text%3E%3C/svg%3E');
+}
 .wallet-modal h2 { margin-bottom: 22px; font-size: 22px; color: #22d1f8; }
 .wallet-modal ul { list-style: none; padding: 0; }
 .wallet-modal li { margin: 10px 0; }
