@@ -6,6 +6,9 @@
   <title>LaunchCoin – No-Code Solana Token Creator</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="icon" type="image/png" href="assets/logo.png" />
+  
+  <!-- QRCode libreria – OBBLIGATORIA -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 </head>
 <body>
   <header class="glass">
@@ -21,7 +24,6 @@
         <a href="faq.html">FAQ</a>
       </nav>
     </div>
-    <!-- PULSANTE CONNECT CON FALLBACK -->
     <button class="connect-btn" onclick="window.connectWallet ? window.connectWallet() : (function(){ alert('Caricamento in corso...'); window.location.href='wallet.html'; })()">Connect</button>
   </header>
 
@@ -66,20 +68,15 @@
     <p>&copy; 2026 LaunchCoin. All rights reserved.</p>
   </footer>
 
-  <!-- CARICA IL MODULO PRINCIPALE -->
+  <!-- SOLO QUESTO SCRIPT MODULO -->
   <script type="module" src="/src/main.js"></script>
   
-  <!-- FALLBACK: se il modulo non si carica, reindirizza a wallet.html -->
   <script>
     setTimeout(function() {
       if (typeof window.connectWallet === 'undefined') {
         console.log('⚠️ main.js non caricato, uso fallback');
-        window.connectWallet = function() {
-          window.location.href = 'wallet.html';
-        };
-        window.createCoin = function() {
-          alert('Caricamento in corso... riprova tra qualche secondo');
-        };
+        window.connectWallet = function() { window.location.href = 'wallet.html'; };
+        window.createCoin = function() { alert('Caricamento in corso... riprova tra qualche secondo'); };
       }
     }, 2000);
   </script>
