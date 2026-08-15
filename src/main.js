@@ -1,5 +1,4 @@
-// ===== main.js – SOLO WALLETCONNECT (QR + DEEP LINK) =====
-// NIENTE PHANTOM, NIENTE SOLFLARE, SOLO WC.
+// ===== main.js – DEFINITIVO (SENZA CONFLITTI) =====
 import { UniversalProvider } from '@walletconnect/universal-provider';
 
 let walletPublicKey = null;
@@ -74,18 +73,29 @@ function createModal() {
       </div>
       
       <div style="display: flex; flex-direction: column; gap: 8px;">
-        <!-- SOLO WALLETCONNECT QR E DEEP LINK -->
-        <button onclick="window.showQRCode()" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;color:#ecf5ff;cursor:pointer;transition:0.2s;font-size:15px;width:100%;">
-          <span style="font-size:24px;">📱</span> Scansiona QR
+        <button onclick="window.connectPhantom()" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;color:#ecf5ff;cursor:pointer;transition:0.2s;font-size:15px;width:100%;">
+          <img src="assets/phantom.png" alt="Phantom" style="width:28px;height:28px;" /> Phantom
         </button>
-        <button onclick="window.connectDeepLink('phantom')" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;color:#ecf5ff;cursor:pointer;transition:0.2s;font-size:15px;width:100%;">
-          <img src="assets/phantom.png" alt="Phantom" style="width:28px;height:28px;" /> Phantom (App)
+        <button onclick="window.connectSolflare()" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;color:#ecf5ff;cursor:pointer;transition:0.2s;font-size:15px;width:100%;">
+          <img src="assets/solflare.png" alt="Solflare" style="width:28px;height:28px;" /> Solflare
         </button>
         <button onclick="window.connectDeepLink('trust')" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;color:#ecf5ff;cursor:pointer;transition:0.2s;font-size:15px;width:100%;">
-          <img src="assets/trust.png" alt="Trust" style="width:28px;height:28px;" /> Trust Wallet
+          <img src="assets/trust.png" alt="Trust Wallet" style="width:28px;height:28px;" /> Trust Wallet
         </button>
-        <button onclick="window.connectDeepLink('solflare')" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;color:#ecf5ff;cursor:pointer;transition:0.2s;font-size:15px;width:100%;">
-          <img src="assets/solflare.png" alt="Solflare" style="width:28px;height:28px;" /> Solflare
+        <button onclick="window.connectDeepLink('coinbase')" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;color:#ecf5ff;cursor:pointer;transition:0.2s;font-size:15px;width:100%;">
+          <img src="assets/coinbase.png" alt="Coinbase" style="width:28px;height:28px;" /> Coinbase Wallet
+        </button>
+        <button onclick="window.connectDeepLink('backpack')" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;color:#ecf5ff;cursor:pointer;transition:0.2s;font-size:15px;width:100%;">
+          <img src="assets/backpack.png" alt="Backpack" style="width:28px;height:28px;" /> Backpack
+        </button>
+        <button onclick="window.connectDeepLink('nightly')" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;color:#ecf5ff;cursor:pointer;transition:0.2s;font-size:15px;width:100%;">
+          <img src="assets/nightly.png" alt="Nightly" style="width:28px;height:28px;" /> Nightly
+        </button>
+        <button onclick="window.connectDeepLink('glow')" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;color:#ecf5ff;cursor:pointer;transition:0.2s;font-size:15px;width:100%;">
+          <span style="font-size:20px;">✨</span> Glow
+        </button>
+        <button onclick="window.showQRCode()" style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px 16px;color:#ecf5ff;cursor:pointer;transition:0.2s;font-size:15px;width:100%;">
+          <span style="font-size:24px;">📱</span> WalletConnect (QR)
         </button>
       </div>
       
@@ -107,7 +117,49 @@ window.closeModal = function() {
   }
 };
 
-// ===== DEEP LINK – APRE APP MOBILE =====
+// ===== PHANTOM =====
+window.connectPhantom = async function() {
+  try {
+    if (window.solana && window.solana.isPhantom && typeof window.solana.connect === 'function') {
+      const resp = await window.solana.connect();
+      if (resp && resp.publicKey) {
+        walletPublicKey = resp.publicKey.toString();
+        alert('✅ Connesso a Phantom: ' + walletPublicKey);
+        window.closeModal();
+        window.location.href = 'create.html';
+        return;
+      }
+    }
+    alert('⚠️ Phantom non risponde. Usa WalletConnect.');
+    window.showQRCode();
+  } catch(e) {
+    console.error('Phantom error:', e);
+    window.showQRCode();
+  }
+};
+
+// ===== SOLFLARE =====
+window.connectSolflare = async function() {
+  try {
+    if (window.solflare && window.solflare.isSolflare && typeof window.solflare.connect === 'function') {
+      const resp = await window.solflare.connect();
+      if (resp && resp.publicKey) {
+        walletPublicKey = resp.publicKey.toString();
+        alert('✅ Connesso a Solflare: ' + walletPublicKey);
+        window.closeModal();
+        window.location.href = 'create.html';
+        return;
+      }
+    }
+    alert('⚠️ Solflare non risponde. Usa WalletConnect.');
+    window.showQRCode();
+  } catch(e) {
+    console.error('Solflare error:', e);
+    window.showQRCode();
+  }
+};
+
+// ===== DEEP LINK =====
 window.connectDeepLink = async function(walletType) {
   try {
     if (!provider) {
@@ -249,13 +301,35 @@ window.copyURI = function() {
 window.connectWallet = async function() {
   console.log('🔵 connectWallet chiamata');
   createModal();
+
+  if (window.solana && window.solana.isPhantom && typeof window.solana.connect === 'function') {
+    try {
+      const resp = await window.solana.connect({ onlyIfTrusted: true });
+      if (resp && resp.publicKey) {
+        walletPublicKey = resp.publicKey.toString();
+        alert('✅ Connesso a Phantom: ' + walletPublicKey);
+        window.closeModal();
+        window.location.href = 'create.html';
+        return;
+      }
+    } catch(e) { /* fallback */ }
+  }
 };
 
 // ===== SELEZIONE WALLET =====
 window.selectWallet = function(walletName) {
   window.closeModal();
-  if (walletName === 'phantom' || walletName === 'solflare' || walletName === 'trust' || walletName === 'coinbase') {
-    window.connectDeepLink(walletName);
+  const map = {
+    'phantom': () => window.connectPhantom(),
+    'solflare': () => window.connectSolflare(),
+    'trust': () => window.connectDeepLink('trust'),
+    'coinbase': () => window.connectDeepLink('coinbase'),
+    'backpack': () => window.connectDeepLink('backpack'),
+    'nightly': () => window.connectDeepLink('nightly'),
+    'glow': () => window.connectDeepLink('glow'),
+  };
+  if (map[walletName]) {
+    map[walletName]();
   } else {
     window.showQRCode();
   }
@@ -322,4 +396,4 @@ document.addEventListener('click', function(e) {
   if (wrapper && menu && !wrapper.contains(e.target)) menu.classList.remove('open');
 });
 
-console.log('✅ main.js caricato (Solo WalletConnect)');
+console.log('✅ main.js caricato (Solo Solana)');
