@@ -1,18 +1,25 @@
 // ===== CONFIGURAZIONE =====
 import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
 import { WalletModalProvider, WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import { PhantomWalletAdapter, SolflareWalletAdapter, TrustWalletAdapter, CoinbaseWalletAdapter, TorusWalletAdapter } from '@solana/wallet-adapter-wallets';
+import {
+  PhantomWalletAdapter,
+  SolflareWalletAdapter,
+  TrustWalletAdapter,
+  CoinbaseWalletAdapter,
+  TorusWalletAdapter,
+  LedgerWalletAdapter,
+  WalletConnectWalletAdapter,
+} from '@solana/wallet-adapter-wallets';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { clusterApiUrl } from '@solana/web3.js';
 import React, { useMemo } from 'react';
 import ReactDOM from 'react-dom';
 
-// ===== COMPONENTE PRINCIPALE (COME UNISWAP) =====
+// ===== COMPONENTE PRINCIPALE =====
 function App() {
-  // Configurazione della rete Solana
   const endpoint = useMemo(() => clusterApiUrl('mainnet-beta'), []);
   
-  // Lista wallet supportati (come Uniswap)
+  // TUTTI I WALLET SUPPORTATI (come Uniswap)
   const wallets = useMemo(
     () => [
       new PhantomWalletAdapter(),
@@ -20,6 +27,13 @@ function App() {
       new TrustWalletAdapter(),
       new CoinbaseWalletAdapter(),
       new TorusWalletAdapter(),
+      new LedgerWalletAdapter(),
+      new WalletConnectWalletAdapter({
+        network: 'mainnet-beta',
+        options: {
+          projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
+        },
+      }),
     ],
     []
   );
@@ -28,10 +42,11 @@ function App() {
     <ConnectionProvider endpoint={endpoint}>
       <WalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>
-          {/* Pulsante Connect che apre la finestra con tutti i wallet */}
-          <WalletMultiButton />
-          <div id="app-content">
-            {/* Il resto del tuo sito */}
+          <div style={{ padding: '20px' }}>
+            <WalletMultiButton />
+            <h1>LaunchCoin</h1>
+            <p>Solana Token Creator</p>
+            <p>from concept to token in just a few clicks!</p>
           </div>
         </WalletModalProvider>
       </WalletProvider>
