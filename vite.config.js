@@ -5,7 +5,25 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills';
 export default defineConfig({
   plugins: [
     nodePolyfills({
-      include: ['crypto', 'stream', 'events', 'buffer', 'process']
+      include: [
+        'crypto',
+        'stream',
+        'events',
+        'buffer',
+        'process',
+        'util',
+        'string_decoder',
+        'zlib',
+        'http',
+        'https',
+        'url',
+        'path',
+        'fs',
+        'net',
+        'tls',
+        'dgram',
+        'dns'
+      ]
     })
   ],
   server: { port: 3000 },
@@ -24,13 +42,28 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src')
+      '@': path.resolve(__dirname, 'src'),
+      // Aggiungi questi alias per risolvere i moduli Node.js
+      'node:net': 'net',
+      'node:http': 'http',
+      'node:https': 'https',
+      'node:url': 'url',
+      'node:path': 'path',
+      'node:fs': 'fs',
+      'node:stream': 'stream',
+      'node:crypto': 'crypto',
+      'node:zlib': 'zlib',
+      'node:tls': 'tls',
+      'node:dgram': 'dgram',
+      'node:dns': 'dns'
     }
   },
   optimizeDeps: {
     include: [
       '@web3modal/solana',
-      '@solana/web3.js'
+      '@solana/web3.js',
+      'rpc-websockets',
+      'node-fetch'
     ]
   },
   define: {
