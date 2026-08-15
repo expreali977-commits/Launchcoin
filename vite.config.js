@@ -1,7 +1,13 @@
 import { defineConfig } from 'vite';
 import path from 'path';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 export default defineConfig({
+  plugins: [
+    nodePolyfills({
+      include: ['crypto', 'stream', 'events', 'buffer', 'process']
+    })
+  ],
   server: { port: 3000 },
   build: {
     outDir: 'dist',
@@ -13,23 +19,21 @@ export default defineConfig({
         liquidity: path.resolve(__dirname, 'liquidity.html'),
         faq: path.resolve(__dirname, 'faq.html'),
         wallet: path.resolve(__dirname, 'wallet.html'),
-      },
-      // AGGIUNGI QUESTA RIGA QUI SOTTO PER RISOLVERE L'ERRORE DI BUILD
-      external: ['rpc-websockets/dist/lib/client']
+      }
     }
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src'),
+      '@': path.resolve(__dirname, 'src')
     }
   },
   optimizeDeps: {
     include: [
-      '@web3modal/solana',  // Cambiato da '@web3modal/ethers'
-      '@solana/web3.js',
+      '@web3modal/solana',
+      '@solana/web3.js'
     ]
   },
   define: {
-    'process.env.NODE_ENV': '"production"',
+    'process.env.NODE_ENV': '"production"'
   }
 });
