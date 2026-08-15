@@ -1,4 +1,4 @@
-import { createWeb3Modal, defaultSolanaConfig } from '@web3modal/solana';
+import { createWeb3Modal, defaultConfig } from '@web3modal/solana';
 
 let walletPublicKey = null;
 let currentStep = 0;
@@ -13,7 +13,7 @@ window.toggleMenu = function() {
 const projectId = 'da6aaea2be14c6cc676dbaf3325b5bd5';
 
 const modal = createWeb3Modal({
-  solanaConfig: defaultSolanaConfig({
+  solanaConfig: defaultConfig({
     metadata: {
       name: 'LaunchCoin',
       description: 'Solana Token Creator',
@@ -22,7 +22,7 @@ const modal = createWeb3Modal({
     }
   }),
   projectId,
-  chains: ['solana:mainnet'], // Solo Solana
+  chains: ['solana:mainnet'], // Solo Solana (non Ethereum)
   themeMode: 'dark',
   themeVariables: {
     '--w3m-z-index': '10000',
@@ -39,7 +39,7 @@ window.connectWallet = async function() {
 
     const unsubscribe = modal.subscribeEvents((event) => {
       if (event.type === 'connect') {
-        const { address } = event.data;
+        const { address } = event.data; // Solo per Solana, l'address è il publicKey
         walletPublicKey = address;
         alert('✅ Connesso a ' + walletPublicKey);
         window.location.href = 'create.html';
@@ -56,9 +56,9 @@ window.connectWallet = async function() {
   }
 };
 
-// ===== SELECT WALLET (per la pagina wallet.html) =====
+// ===== SELECT WALLET (per wallet.html) =====
 window.selectWallet = function(walletName) {
-  window.connectWallet();
+  window.connectWallet(); // Il modale offre già tutti i wallet
 };
 
 // ===== STEP NAVIGATION =====
