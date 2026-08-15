@@ -1,4 +1,4 @@
-// ===== main.js – DEPURATO E STABILE =====
+// ===== main.js – DEFINITIVO (SENZA CONFLITTI) =====
 import { UniversalProvider } from '@walletconnect/universal-provider';
 
 let walletPublicKey = null;
@@ -117,10 +117,9 @@ window.closeModal = function() {
   }
 };
 
-// ===== PHANTOM (ESTENSIONE) – CON GESTIONE ERRORI =====
+// ===== PHANTOM =====
 window.connectPhantom = async function() {
   try {
-    // Controlla se Phantom esiste e non è bloccato
     if (window.solana && window.solana.isPhantom && typeof window.solana.connect === 'function') {
       const resp = await window.solana.connect();
       if (resp && resp.publicKey) {
@@ -131,17 +130,15 @@ window.connectPhantom = async function() {
         return;
       }
     }
-    // Se Phantom non risponde, fallback a WalletConnect
     alert('⚠️ Phantom non risponde. Usa WalletConnect.');
     window.showQRCode();
   } catch(e) {
     console.error('Phantom error:', e);
-    alert('Errore Phantom. Passo a WalletConnect.');
     window.showQRCode();
   }
 };
 
-// ===== SOLFLARE (ESTENSIONE) =====
+// ===== SOLFLARE =====
 window.connectSolflare = async function() {
   try {
     if (window.solflare && window.solflare.isSolflare && typeof window.solflare.connect === 'function') {
@@ -162,7 +159,7 @@ window.connectSolflare = async function() {
   }
 };
 
-// ===== DEEP LINK – APRE APP MOBILE =====
+// ===== DEEP LINK =====
 window.connectDeepLink = async function(walletType) {
   try {
     if (!provider) {
@@ -187,7 +184,6 @@ window.connectDeepLink = async function(walletType) {
     if (!uri) throw new Error('Nessun URI generato');
     currentUri = uri;
 
-    // Link universale WC – funziona su iOS/Android
     window.location.href = `wc:${uri}`;
 
     if (qrCheckInterval) clearInterval(qrCheckInterval);
@@ -220,7 +216,7 @@ window.connectDeepLink = async function(walletType) {
   }
 };
 
-// ===== QR CODE – SCANSIONE MOBILE =====
+// ===== QR CODE =====
 window.showQRCode = async function() {
   const qrContainer = document.getElementById('qr-modal-container');
   const qrDiv = document.getElementById('qr-code-modal');
@@ -306,7 +302,6 @@ window.connectWallet = async function() {
   console.log('🔵 connectWallet chiamata');
   createModal();
 
-  // Tenta Phantom solo se non ci sono conflitti
   if (window.solana && window.solana.isPhantom && typeof window.solana.connect === 'function') {
     try {
       const resp = await window.solana.connect({ onlyIfTrusted: true });
@@ -317,7 +312,7 @@ window.connectWallet = async function() {
         window.location.href = 'create.html';
         return;
       }
-    } catch(e) { /* fallback al modale */ }
+    } catch(e) { /* fallback */ }
   }
 };
 
