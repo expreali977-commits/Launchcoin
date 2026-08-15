@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5" />
   <title>Connect Wallet – LaunchCoin</title>
   <link rel="stylesheet" href="style.css" />
+  
+  <!-- QRCode libreria – OBBLIGATORIA -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 </head>
 <body>
   <header class="glass">
@@ -36,7 +39,6 @@
     </div>
     
     <ul>
-      <!-- SOLO WALLET SOLANA -->
       <li><button onclick="window.selectWallet('phantom')"><img src="assets/phantom.png" alt="Phantom" /> Phantom</button></li>
       <li><button onclick="window.selectWallet('solflare')"><img src="assets/solflare.png" alt="Solflare" /> Solflare</button></li>
       <li><button onclick="window.selectWallet('trust')"><img src="assets/trust.png" alt="Trust Wallet" /> Trust Wallet</button></li>
@@ -51,7 +53,7 @@
     <button class="back" onclick="window.location.href='index.html'">← Back</button>
   </div>
 
-  <script src="https://unpkg.com/@solana/web3.js@1.87.6/lib/index.iife.min.js"></script>
+  <!-- SOLO QUESTO SCRIPT MODULO -->
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>
