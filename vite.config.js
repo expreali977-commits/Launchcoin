@@ -25,7 +25,6 @@ export default defineConfig({
     include: [
       '@walletconnect/web3wallet',
       '@walletconnect/modal',
-      '@walletconnect/modal-core',
       '@walletconnect/utils',
       '@solana/web3.js',
       '@solana/spl-token'
