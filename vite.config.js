@@ -23,7 +23,12 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: [
-      '@walletconnect/universal-provider'
+      '@walletconnect/web3wallet',
+      '@walletconnect/modal',
+      '@walletconnect/modal-core',
+      '@walletconnect/utils',
+      '@solana/web3.js',
+      '@solana/spl-token'
     ]
   }
 });
